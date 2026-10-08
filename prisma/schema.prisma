@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  role      String   @default("PACIENTE") // ADMIN, MEDICO, PACIENTE
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+
+  // Relations
+  profile   PatientProfile?
+  registros Registro[]
+  woops     Woop[]
+}
+
+model PatientProfile {
+  id             String  @id @default(uuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age            Int?
+  doctorId       String? 
+  modulosAtivos  String? // JSON format string
+}
+
+model Registro {
+  id         String   @id @default(uuid())
+  patientId  String
+  user       User     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  tipo       String   // MEDICAO, SONO, SENTIMENTO, TEXTO
+  titulo     String
+  detalhe    String?
+  emoji      String?
+  qualidade  String?  
+  
+  hora       String?  // HH:MM
+  createdAt  DateTime @default(now())
+}
+
+model Woop {
+  id         String   @id @default(uuid())
+  patientId  String
+  user       User     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  wish       String
+  outcome    String
+  obstacle   String
+  plan       String
+  active     Boolean  @default(true)
+  
+  createdAt  DateTime @default(now())
+}
