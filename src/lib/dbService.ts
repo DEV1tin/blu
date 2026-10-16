@@ -12,8 +12,8 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { RegistroData, WoopData } from '../types/database';
-import { getLogicalDateString } from './dateUtils';
+import { RegistroData, WoopData, RevisaoDiariaData, PacienteConfigIA } from '../types/database';
+import { getLogicalDateString, getCurrentTimeString } from './dateUtils';
 import { UserWidgetConfig } from '../types/widgets';
 import { DEFAULT_USER_WIDGETS, resolveUserWidgets } from './widgetDefaults';
 
@@ -296,35 +296,141 @@ export async function excluirWoop(woopId: string): Promise<boolean> {
 }
 
 /**
- * Salva uma revisão do dia
+ * Salva ou atualiza a revisão do dia (garantindo 1 revisão consolidada por dia lógico)
  */
 export async function salvarRevisaoDiaria(dados: {
+  id?: string;
   pacienteId: string;
   dataLogica: string;
+  mensagemDoBlu?: string;
+  perguntasReflexao?: string[];
   respostaReflexao: string;
-}) {
-  const revisao = {
-    ...dados,
-    createdAt: new Date().toISOString(),
+  isFallback?: boolean;
+}): Promise<RevisaoDiariaData> {
+  const agora = new Date().toISOString();
+  const horaAtual = getCurrentTimeString();
+
+  // Verifica se já existe revisão para essa dataLogica caso o id não tenha sido informado
+  let idAlvo = dados.id;
+  let existente: RevisaoDiariaData | null = null;
+
+  if (!idAlvo && dados.pacienteId) {
+    const todas = await buscarRevisoes(dados.pacienteId);
+    existente = todas.find(r => r.dataLogica === dados.dataLogica) || null;
+    if (existente?.id) {
+      idAlvo = existente.id;
+    }
+  }
+
+  if (idAlvo) {
+    const camposAtualizados: Partial<RevisaoDiariaData> = {
+      respostaReflexao: dados.respostaReflexao ?? existente?.respostaReflexao ?? '',
+      updatedAt: agora,
+    };
+    if (dados.mensagemDoBlu !== undefined) {
+      camposAtualizados.mensagemDoBlu = dados.mensagemDoBlu;
+    }
+    if (dados.perguntasReflexao !== undefined) {
+      camposAtualizados.perguntasReflexao = dados.perguntasReflexao;
+    }
+    if (dados.isFallback !== undefined) {
+      camposAtualizados.isFallback = Boolean(dados.isFallback);
+    }
+
+    if (isFirebaseConfigured && !idAlvo.startsWith('local_')) {
+      try {
+        const docRef = doc(db, 'revisoes_diarias', idAlvo);
+        await updateDoc(docRef, camposAtualizados);
+      } catch (err) {
+        console.warn('Falha ao atualizar revisão diária no Firestore:', err);
+      }
+    }
+
+    const locais = getLocalData<RevisaoDiariaData[]>(STORAGE_KEY_REVISOES, []);
+    const idx = locais.findIndex(r => r.id === idAlvo);
+    if (idx !== -1) {
+      locais[idx] = { ...locais[idx], ...camposAtualizados };
+      setLocalData(STORAGE_KEY_REVISOES, locais);
+      return locais[idx];
+    }
+
+    return {
+      id: idAlvo,
+      pacienteId: dados.pacienteId,
+      dataLogica: dados.dataLogica,
+      hora: existente?.hora || horaAtual,
+      mensagemDoBlu: dados.mensagemDoBlu || existente?.mensagemDoBlu || '',
+      perguntasReflexao: dados.perguntasReflexao || existente?.perguntasReflexao || [],
+      respostaReflexao: dados.respostaReflexao,
+      isFallback: Boolean(dados.isFallback ?? existente?.isFallback),
+      createdAt: existente?.createdAt || agora,
+      updatedAt: agora,
+    };
+  }
+
+  const novaRevisao: RevisaoDiariaData = {
+    pacienteId: dados.pacienteId,
+    dataLogica: dados.dataLogica,
+    hora: horaAtual,
+    mensagemDoBlu: dados.mensagemDoBlu || '',
+    perguntasReflexao: dados.perguntasReflexao || [],
+    respostaReflexao: dados.respostaReflexao || '',
+    isFallback: Boolean(dados.isFallback),
+    createdAt: agora,
   };
 
   if (isFirebaseConfigured) {
     try {
       const colRef = collection(db, 'revisoes_diarias');
-      await addDoc(colRef, {
-        ...revisao,
+      const docRef = await addDoc(colRef, {
+        ...novaRevisao,
         serverTimestamp: Timestamp.now(),
       });
-      return revisao;
+      novaRevisao.id = docRef.id;
+      return novaRevisao;
     } catch (err) {
       console.warn('Falha ao salvar revisão diária no Firestore:', err);
     }
   }
 
-  const locais = getLocalData<any[]>(STORAGE_KEY_REVISOES, []);
-  locais.unshift(revisao);
+  const locais = getLocalData<RevisaoDiariaData[]>(STORAGE_KEY_REVISOES, []);
+  novaRevisao.id = `local_rev_${Date.now()}`;
+  locais.unshift(novaRevisao);
   setLocalData(STORAGE_KEY_REVISOES, locais);
-  return revisao;
+  return novaRevisao;
+}
+
+/**
+ * Busca todas as revisões diárias do paciente
+ */
+export async function buscarRevisoes(pacienteId: string): Promise<RevisaoDiariaData[]> {
+  if (isFirebaseConfigured && pacienteId) {
+    try {
+      const colRef = collection(db, 'revisoes_diarias');
+      const q = query(colRef, where('pacienteId', '==', pacienteId));
+      const snapshot = await getDocs(q);
+      const list: RevisaoDiariaData[] = [];
+      snapshot.forEach(docSnap => {
+        list.push({ id: docSnap.id, ...(docSnap.data() as Omit<RevisaoDiariaData, 'id'>) });
+      });
+      return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (err) {
+      console.warn('Falha ao buscar revisões no Firestore, usando fallback local:', err);
+    }
+  }
+
+  return getLocalData<RevisaoDiariaData[]>(STORAGE_KEY_REVISOES, [])
+    .filter(r => r.pacienteId === pacienteId || !r.pacienteId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+/**
+ * Busca a revisão do dia lógico atual do paciente
+ */
+export async function buscarRevisaoDeHoje(pacienteId: string): Promise<RevisaoDiariaData | null> {
+  const dataLogicaHoje = getLogicalDateString();
+  const todas = await buscarRevisoes(pacienteId);
+  return todas.find(r => r.dataLogica === dataLogicaHoje) || null;
 }
 
 /**
@@ -336,12 +442,13 @@ export async function buscarWidgetsUsuario(userId: string): Promise<UserWidgetCo
 }
 
 /**
- * Busca dados completos do perfil do usuário no Firestore
+ * Busca dados completos do perfil do usuário no Firestore (incluindo configIa da Camada 2 se houver)
  */
 export async function buscarPerfilUsuario(uid: string): Promise<{
   nome?: string;
   email?: string;
   medicoResponsavel?: string;
+  configIa?: PacienteConfigIA;
 } | null> {
   if (isFirebaseConfigured && uid) {
     try {

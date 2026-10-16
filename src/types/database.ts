@@ -37,3 +37,31 @@ export interface WoopData {
   updatedAt?: string;
 }
 
+/**
+ * Camada 2 de Personalização da IA (Configurada futuramente pelo médico para cada paciente)
+ */
+export interface PacienteConfigIA {
+  ativo: boolean;
+  focoClinico?: string; // Ex: "TDAH combinado + Ansiedade"
+  estiloComunicacao?: string; // Ex: "Acolhedor, direto, sem cobranças de horário"
+  orientacoesDoMedico?: string; // Instruções personalizadas do psiquiatra
+  topicosEvitar?: string; // Gatilhos ou assuntos que o Blu deve evitar abordar
+}
+
+/**
+ * Estrutura da Revisão Diária com o Blu (Perguntas geradas + Resposta do Paciente)
+ */
+export interface RevisaoDiariaData {
+  id?: string;
+  pacienteId: string;
+  dataLogica: string; // YYYY-MM-DD
+  hora?: string; // HH:mm
+  mensagemDoBlu: string;
+  perguntasReflexao: string[];
+  respostaReflexao: string;
+  isFallback?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+

@@ -8,8 +8,14 @@ import {
   buscarWoopDeHoje,
   excluirWoop as dbExcluirWoop,
   buscarWidgetsUsuario,
-  salvarRevisaoDiaria
+  salvarRevisaoDiaria,
+  buscarRevisoes,
+  buscarRevisaoDeHoje,
+  buscarPerfilUsuario,
+  atualizarPerfilUsuario
 } from '../lib/dbService';
+import { gerarReflexaoComBlu } from '../lib/bluAiService';
+import { RegistroData, WoopData } from '../types/database';
 
 export const getConfigMedico = async () => {
   return {
@@ -92,19 +98,45 @@ export const getWidgetsUsuario = async (userId: string = 'usr_victor') => {
 };
 
 export const salvarRevisao = async (dados: {
+  id?: string;
   pacienteId: string;
   dataLogica: string;
+  mensagemDoBlu?: string;
+  perguntasReflexao?: string[];
   respostaReflexao: string;
+  isFallback?: boolean;
 }) => {
   return await salvarRevisaoDiaria(dados);
 };
 
+export const getRevisoes = async (pacienteId: string = 'usr_victor') => {
+  return await buscarRevisoes(pacienteId);
+};
+
+export const getRevisaoDeHoje = async (pacienteId: string = 'usr_victor') => {
+  return await buscarRevisaoDeHoje(pacienteId);
+};
+
+export const gerarReflexaoBluAction = async (params: {
+  uid: string;
+  nomePaciente: string;
+  registrosHoje: RegistroData[];
+  woopHoje?: WoopData | null;
+}) => {
+  const perfil = await buscarPerfilUsuario(params.uid);
+  return await gerarReflexaoComBlu({
+    nomePaciente: params.nomePaciente || perfil?.nome || 'Paciente',
+    registrosHoje: params.registrosHoje,
+    woopHoje: params.woopHoje,
+    configIa: perfil?.configIa || null,
+  });
+};
+
 export const getPerfilUsuario = async (uid: string) => {
-  const { buscarPerfilUsuario } = await import('../lib/dbService');
   return await buscarPerfilUsuario(uid);
 };
 
 export const setPerfilUsuario = async (uid: string, dados: any) => {
-  const { atualizarPerfilUsuario } = await import('../lib/dbService');
   return await atualizarPerfilUsuario(uid, dados);
 };
+
