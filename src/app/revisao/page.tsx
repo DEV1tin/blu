@@ -6,12 +6,14 @@ import { useAuth } from '../../context/AuthContext';
 import { getRegistrosDeHoje, salvarRevisao } from '../actions';
 import { getLogicalDateString } from '../../lib/dateUtils';
 import { RegistroData } from '../../types/database';
+import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 
 type Phase = 'loading_init' | 'timeline' | 'loading_ai' | 'ai_feedback' | 'done';
 
 export default function RevisaoDoDia() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { isListening, toggleListening, stopListening } = useSpeechRecognition();
   const [phase, setPhase] = useState<Phase>('loading_init');
   const [reflexao, setReflexao] = useState("");
   const [registrosHoje, setRegistrosHoje] = useState<RegistroData[]>([]);
@@ -46,6 +48,7 @@ export default function RevisaoDoDia() {
   }, [phase]);
 
   const handleEnviarReflexao = async () => {
+    stopListening();
     if (user?.uid) {
       try {
         await salvarRevisao({
@@ -191,17 +194,28 @@ export default function RevisaoDoDia() {
               <h3 className="text-sm font-bold text-white mb-3">Quer anotar suas reflexões?</h3>
               <p className="text-xs text-gray-400 mb-4">Responda ao Blu digitando ou por áudio.</p>
               
-              <div className="bg-background border border-gray-600/50/50 rounded-2xl p-2 mb-4 focus-within:border-primary/50 transition-colors shadow-inner">
+              <div className={`bg-background border rounded-2xl p-2 mb-4 transition-colors shadow-inner ${
+                isListening ? 'border-red-500/50 bg-red-500/5' : 'border-gray-600/50/50 focus-within:border-primary/50'
+              }`}>
                 <textarea 
                   value={reflexao}
                   onChange={(e) => setReflexao(e.target.value)}
-                  placeholder="Hoje o meu dia foi..."
+                  placeholder={isListening ? "Ouvindo sua reflexão..." : "Hoje o meu dia foi..."}
                   className="w-full bg-transparent text-sm text-white placeholder-slate-500 resize-none h-24 p-2 focus:outline-none"
                 />
                 <div className="flex justify-between items-center px-2 pb-1">
                   <span className="text-xs text-gray-500">{reflexao.length} caracteres</span>
-                  <button className="w-10 h-10 bg-surface/70 rounded-xl flex items-center justify-center text-white hover:bg-gray-700 transition-colors">
-                    🎙️
+                  <button 
+                    type="button"
+                    onClick={() => toggleListening(reflexao, setReflexao)}
+                    title={isListening ? "Parar ditado" : "Ditar por voz"}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                      isListening 
+                        ? 'bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse' 
+                        : 'bg-surface/70 text-white hover:bg-gray-700'
+                    }`}
+                  >
+                    {isListening ? '⏹️' : '🎙️'}
                   </button>
                 </div>
               </div>

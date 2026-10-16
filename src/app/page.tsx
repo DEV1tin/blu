@@ -6,6 +6,7 @@ import { addRegistro, getRegistrosDeHoje, getWidgetsUsuario } from './actions';
 import { UserWidgetConfig } from '../types/widgets';
 import { DEFAULT_USER_WIDGETS } from '../lib/widgetDefaults';
 import { useAuth } from '../context/AuthContext';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 // Configuração do Médico / Sentimentos
 const configMedico = {
@@ -22,6 +23,7 @@ const configMedico = {
 export default function Home() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
+  const { isListening, toggleListening, stopListening } = useSpeechRecognition();
   const [menuAberto, setMenuAberto] = useState(false);
   
   // Widgets configurados para o usuário (lista ordenada)
@@ -84,6 +86,7 @@ export default function Home() {
   };
 
   const handleRegistroPrincipal = async () => {
+    stopListening();
     setRegistroPrincipalFeito(true);
     try {
       await addRegistro({
@@ -159,16 +162,27 @@ export default function Home() {
                   })}
                 </div>
 
-                <div className="flex items-center gap-2 bg-background border border-gray-600/50/50 rounded-2xl p-1.5 pl-4 mb-5 shadow-inner focus-within:border-primary/50 transition-colors">
+                <div className={`flex items-center gap-2 bg-background border rounded-2xl p-1.5 pl-4 mb-5 shadow-inner transition-colors ${
+                  isListening ? 'border-red-500/50 bg-red-500/5' : 'border-gray-600/50/50 focus-within:border-primary/50'
+                }`}>
                   <input 
                     type="text"
                     value={registroTexto}
                     onChange={(e) => setRegistroTexto(e.target.value)}
-                    placeholder="Digite ou grave um áudio..."
+                    placeholder={isListening ? "Ouvindo você falar..." : "Digite ou dite por voz..."}
                     className="bg-transparent text-sm text-white placeholder-slate-500 flex-1 focus:outline-none"
                   />
-                  <button className="w-9 h-9 bg-surface/70 rounded-xl flex items-center justify-center text-white hover:bg-gray-700 transition-colors flex-shrink-0">
-                    🎙️
+                  <button 
+                    type="button"
+                    onClick={() => toggleListening(registroTexto, setRegistroTexto)}
+                    title={isListening ? "Parar ditado" : "Ditar por voz"}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
+                      isListening 
+                        ? 'bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse' 
+                        : 'bg-surface/70 text-white hover:bg-gray-700'
+                    }`}
+                  >
+                    {isListening ? '⏹️' : '🎙️'}
                   </button>
                 </div>
 
