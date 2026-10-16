@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Nunito } from "next/font/google";
 import "./globals.css";
 
@@ -14,9 +14,27 @@ const nunito = Nunito({
 
 import { AppProviders } from "../components/AppProviders";
 
+export const viewport: Viewport = {
+  themeColor: "#121826",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: "Blu.",
   description: "Acompanhamento Psiquiátrico Amigável",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Blu",
+  },
+  icons: {
+    icon: "/mascote.jpg",
+    apple: "/mascote.jpg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
