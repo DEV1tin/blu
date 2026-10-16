@@ -4,7 +4,9 @@ import {
   getDocs, 
   query, 
   where, 
-  orderBy, 
+  doc,
+  getDoc,
+  setDoc,
   Timestamp 
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
@@ -13,10 +15,10 @@ import { getLogicalDateString } from './dateUtils';
 import { UserWidgetConfig } from '../types/widgets';
 import { DEFAULT_USER_WIDGETS, resolveUserWidgets } from './widgetDefaults';
 
-// Chaves para cache/fallback local (quando o Firebase ainda não tiver chaves preenchidas)
 const STORAGE_KEY_REGISTROS = 'blu_offline_registros';
 const STORAGE_KEY_WOOP = 'blu_offline_woops';
 const STORAGE_KEY_WIDGETS = 'blu_user_widgets';
+const STORAGE_KEY_REVISOES = 'blu_offline_revisoes';
 
 function getLocalData<T>(key: string, defaultValue: T): T {
   if (typeof window === 'undefined') return defaultValue;
@@ -71,30 +73,30 @@ export async function salvarRegistro(registro: Omit<RegistroData, 'dataLogica' |
 }
 
 /**
- * Busca todos os registros do paciente (para a tela de Timeline / Meus Registros)
+ * Busca todos os registros do paciente (para Meus Registros / Timeline)
+ * Ordenação feita no cliente para evitar erros de índice composto no Firestore
  */
 export async function buscarRegistros(pacienteId: string): Promise<RegistroData[]> {
-  if (isFirebaseConfigured) {
+  if (isFirebaseConfigured && pacienteId) {
     try {
       const colRef = collection(db, 'registros');
-      const q = query(
-        colRef, 
-        where('pacienteId', '==', pacienteId),
-        orderBy('createdAt', 'desc')
-      );
+      const q = query(colRef, where('pacienteId', '==', pacienteId));
       const snapshot = await getDocs(q);
       const list: RegistroData[] = [];
       snapshot.forEach(doc => {
         list.push({ id: doc.id, ...(doc.data() as Omit<RegistroData, 'id'>) });
       });
-      return list;
+      // Ordenação decrescente em memória (mais recentes primeiro)
+      return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (err) {
       console.warn('Falha ao ler do Firestore, usando fallback local:', err);
     }
   }
 
   const locais = getLocalData<RegistroData[]>(STORAGE_KEY_REGISTROS, []);
-  return locais.filter(r => r.pacienteId === pacienteId || !r.pacienteId);
+  return locais
+    .filter(r => r.pacienteId === pacienteId || !r.pacienteId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 /**
@@ -150,34 +152,62 @@ export async function salvarWoop(woop: Omit<WoopData, 'createdAt'>): Promise<Woo
  * Busca metas WOOP do paciente
  */
 export async function buscarWoops(pacienteId: string): Promise<WoopData[]> {
-  if (isFirebaseConfigured) {
+  if (isFirebaseConfigured && pacienteId) {
     try {
       const colRef = collection(db, 'woop_goals');
-      const q = query(
-        colRef, 
-        where('pacienteId', '==', pacienteId),
-        orderBy('createdAt', 'desc')
-      );
+      const q = query(colRef, where('pacienteId', '==', pacienteId));
       const snapshot = await getDocs(q);
       const list: WoopData[] = [];
       snapshot.forEach(doc => {
         list.push({ id: doc.id, ...(doc.data() as Omit<WoopData, 'id'>) });
       });
-      return list;
+      return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (err) {
       console.warn('Falha ao carregar WOOPs do Firestore, usando fallback local:', err);
     }
   }
 
-  return getLocalData<WoopData[]>(STORAGE_KEY_WOOP, []);
+  return getLocalData<WoopData[]>(STORAGE_KEY_WOOP, [])
+    .filter(w => w.pacienteId === pacienteId || !w.pacienteId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+/**
+ * Salva uma revisão do dia
+ */
+export async function salvarRevisaoDiaria(dados: {
+  pacienteId: string;
+  dataLogica: string;
+  respostaReflexao: string;
+}) {
+  const revisao = {
+    ...dados,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (isFirebaseConfigured) {
+    try {
+      const colRef = collection(db, 'revisoes_diarias');
+      await addDoc(colRef, {
+        ...revisao,
+        serverTimestamp: Timestamp.now(),
+      });
+      return revisao;
+    } catch (err) {
+      console.warn('Falha ao salvar revisão diária no Firestore:', err);
+    }
+  }
+
+  const locais = getLocalData<any[]>(STORAGE_KEY_REVISOES, []);
+  locais.unshift(revisao);
+  setLocalData(STORAGE_KEY_REVISOES, locais);
+  return revisao;
 }
 
 /**
  * Obtém a lista de widgets ativos e ordenados para o usuário
  */
 export async function buscarWidgetsUsuario(userId: string): Promise<UserWidgetConfig[]> {
-  // No futuro, buscar da coleção 'user_widgets' no Firestore
-  // Por enquanto, retorna a lista com todos os widgets ativos resolvidos
   const custom = getLocalData<UserWidgetConfig[]>(`${STORAGE_KEY_WIDGETS}_${userId}`, DEFAULT_USER_WIDGETS);
   return resolveUserWidgets(custom);
 }

@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { addRegistro, getRegistrosDeHoje, getWidgetsUsuario } from './actions';
 import { UserWidgetConfig } from '../types/widgets';
 import { DEFAULT_USER_WIDGETS } from '../lib/widgetDefaults';
+import { useAuth } from '../context/AuthContext';
 
-// Configuração do Médico / Paciente
+// Configuração do Médico / Sentimentos
 const configMedico = {
   nomeMedico: "Bruno",
-  paciente: "Vitor H.",
   sentimentosConfigurados: [
     { label: "Ansiedade", color: "text-red-400 border-red-500/30", activeBg: "bg-red-500/20" },
     { label: "Taquicardia", color: "text-orange-400 border-orange-500/30", activeBg: "bg-orange-500/20" },
@@ -21,6 +21,7 @@ const configMedico = {
 
 export default function Home() {
   const router = useRouter();
+  const { user, loading: authLoading, logout } = useAuth();
   const [menuAberto, setMenuAberto] = useState(false);
   
   // Widgets configurados para o usuário (lista ordenada)
@@ -43,29 +44,37 @@ export default function Home() {
   const [sonoHoras, setSonoHoras] = useState("6:00h");
   const [sonoQualidade, setSonoQualidade] = useState("");
 
+  const uid = user?.uid || 'usr_victor';
+
   useEffect(() => {
-    if (typeof window !== 'undefined' && !localStorage.getItem('auth_token')) {
+    if (!authLoading && !user) {
       router.replace('/login');
       return;
     }
 
-    // Carregar widgets do usuário
-    getWidgetsUsuario().then(setWidgets).catch(console.error);
+    if (user?.uid) {
+      // Carregar widgets do usuário
+      getWidgetsUsuario(user.uid).then(setWidgets).catch(console.error);
 
-    // Carregar registros de HOJE (Regra do dia lógico: reset diário automático)
-    getRegistrosDeHoje().then(hoje => {
-      if (hoje.medicacao) {
-        setMedicacaoFeita(true);
-        setMedicacaoMg(hoje.medicacao.detalhe || "50mg");
-        setMedicacaoHora(hoje.medicacao.hora || "08:00");
-      }
-      if (hoje.sono) {
-        setSonoFeito(true);
-        setSonoHoras(hoje.sono.detalhe.replace(' dormidas', '') || "6:00h");
-        setSonoQualidade(hoje.sono.qualidade || "");
-      }
-    }).catch(console.error);
-  }, [router]);
+      // Carregar registros de HOJE (Regra do dia lógico: reset diário automático)
+      getRegistrosDeHoje(user.uid).then(hoje => {
+        if (hoje.medicacao) {
+          setMedicacaoFeita(true);
+          setMedicacaoMg(hoje.medicacao.detalhe || "50mg");
+          setMedicacaoHora(hoje.medicacao.hora || "08:00");
+        } else {
+          setMedicacaoFeita(false);
+        }
+        if (hoje.sono) {
+          setSonoFeito(true);
+          setSonoHoras(hoje.sono.detalhe.replace(' dormidas', '') || "6:00h");
+          setSonoQualidade(hoje.sono.qualidade || "");
+        } else {
+          setSonoFeito(false);
+        }
+      }).catch(console.error);
+    }
+  }, [user, authLoading, router]);
 
   // Handlers
   const toggleSentimento = (label: string) => {
@@ -83,7 +92,7 @@ export default function Home() {
         detalhe: registroTexto || 'Nenhum detalhe adicional',
         emoji: sentimentosSelecionados.length > 0 ? '🧠' : '📝',
         hora: outroHorarioAberto ? horarioPersonalizado : new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-      });
+      }, uid);
     } catch (e) {
       console.error(e);
     }
@@ -250,7 +259,7 @@ export default function Home() {
                           detalhe: `${medicacaoMg}`,
                           emoji: '💊',
                           hora: medicacaoHora
-                        });
+                        }, uid);
                       } catch (e) { console.error(e); }
                     }}
                     className="w-10 h-10 bg-primary/10 hover:bg-[#8ab08f]/20 border border-primary/20 rounded-xl flex items-center justify-center text-primary transition-colors flex-shrink-0"
@@ -327,7 +336,7 @@ export default function Home() {
                           emoji: '😴',
                           qualidade: sonoQualidade === 'ruim' ? '😫' : sonoQualidade === 'regular' ? '😐' : sonoQualidade === 'bom' ? '🙂' : sonoQualidade === 'otimo' ? '🤩' : '',
                           hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                        });
+                        }, uid);
                       } catch (e) { console.error(e); }
                     }}
                     disabled={!sonoQualidade}
@@ -396,7 +405,7 @@ export default function Home() {
           
           {/* Dropdown Menu */}
           {menuAberto && (
-            <div className="absolute top-12 left-0 w-48 bg-surface/70 border border-gray-600/50 rounded-2xl shadow-xl z-50 overflow-hidden">
+            <div className="absolute top-12 left-0 w-48 bg-surface/90 backdrop-blur-xl border border-gray-600/50 rounded-2xl shadow-xl z-50 overflow-hidden">
               <button 
                 onClick={() => { setMenuAberto(false); router.push('/registros'); }}
                 className="w-full text-left px-4 py-3 text-sm text-gray-200 hover:bg-gray-700 transition-colors"
@@ -409,13 +418,6 @@ export default function Home() {
                 className="w-full text-left px-4 py-3 text-sm text-gray-200 hover:bg-gray-700 transition-colors"
               >
                 👤 Meu Perfil
-              </button>
-              <div className="h-px bg-gray-700 w-full"></div>
-              <button 
-                onClick={() => setMenuAberto(false)}
-                className="w-full text-left px-4 py-3 text-sm text-gray-200 hover:bg-gray-700 transition-colors"
-              >
-                🤖 Sobre o Blu
               </button>
               <div className="h-px bg-gray-700 w-full"></div>
               <button 
@@ -433,9 +435,9 @@ export default function Home() {
               </button>
               <div className="h-px bg-gray-700 w-full"></div>
               <button 
-                onClick={() => {
+                onClick={async () => {
                   setMenuAberto(false);
-                  localStorage.removeItem('auth_token');
+                  await logout();
                   router.push('/login');
                 }}
                 className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-gray-700 hover:text-red-300 transition-colors"
@@ -446,7 +448,9 @@ export default function Home() {
           )}
 
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Olá, {configMedico.paciente}</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight">
+              Olá, {user?.displayName || 'Paciente'}
+            </h1>
             <p className="text-xs text-gray-400">Dr. {configMedico.nomeMedico}</p>
           </div>
         </div>

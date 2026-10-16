@@ -2,9 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { addWoop, getWoops } from '../actions';
+import { useAuth } from '../../context/AuthContext';
 
 export default function WOOPForm() {
   const router = useRouter();
+  const { user, loading } = useAuth();
   const [wish, setWish] = useState("");
   const [outcome, setOutcome] = useState("");
   const [obstacle, setObstacle] = useState("");
@@ -12,15 +14,23 @@ export default function WOOPForm() {
   const [lista, setLista] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const uid = user?.uid || 'usr_victor';
+
   useEffect(() => {
-    getWoops().then(setLista).catch(console.error);
-  }, []);
+    if (!loading && !user) {
+      router.replace('/login');
+      return;
+    }
+    if (user?.uid) {
+      getWoops(user.uid).then(setLista).catch(console.error);
+    }
+  }, [user, loading, router]);
 
   const handleAdd = async () => {
     if(!wish) return;
     setIsSubmitting(true);
     try {
-      const newWoop = await addWoop({ wish, outcome, obstacle, plan });
+      const newWoop = await addWoop({ wish, outcome, obstacle, plan }, uid);
       setLista([newWoop, ...lista]);
       setWish(""); setOutcome(""); setObstacle(""); setPlan("");
     } catch (e) {

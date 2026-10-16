@@ -4,22 +4,13 @@ import {
   buscarRegistrosDeHoje, 
   salvarWoop, 
   buscarWoops, 
-  buscarWidgetsUsuario 
+  buscarWidgetsUsuario,
+  salvarRevisaoDiaria
 } from '../lib/dbService';
-import { RegistroData, WoopData } from '../types/database';
-
-export const authenticate = async (email: string, pass: string) => {
-  return { 
-    success: true, 
-    message: '', 
-    user: { id: 'usr_victor', name: 'Vitor H.', email } 
-  };
-};
 
 export const getConfigMedico = async () => {
   return {
     nomeMedico: "Dr. Bruno",
-    paciente: "Vitor H.",
     modulosAtivos: {
       registroLivre: true,
       dosimetria: true,
@@ -37,9 +28,9 @@ export const getConfigMedico = async () => {
   };
 };
 
-export const addRegistro = async (data: any) => {
+export const addRegistro = async (data: any, pacienteId: string = 'usr_victor') => {
   return await salvarRegistro({
-    pacienteId: 'usr_victor',
+    pacienteId,
     tipo: data.tipo,
     titulo: data.titulo,
     detalhe: data.detalhe,
@@ -49,17 +40,17 @@ export const addRegistro = async (data: any) => {
   });
 };
 
-export const getRegistros = async () => {
-  return await buscarRegistros('usr_victor');
+export const getRegistros = async (pacienteId: string = 'usr_victor') => {
+  return await buscarRegistros(pacienteId);
 };
 
-export const getRegistrosDeHoje = async () => {
-  return await buscarRegistrosDeHoje('usr_victor');
+export const getRegistrosDeHoje = async (pacienteId: string = 'usr_victor') => {
+  return await buscarRegistrosDeHoje(pacienteId);
 };
 
-export const addWoop = async (data: any) => {
+export const addWoop = async (data: any, pacienteId: string = 'usr_victor') => {
   return await salvarWoop({
-    pacienteId: 'usr_victor',
+    pacienteId,
     wish: data.wish,
     outcome: data.outcome,
     obstacle: data.obstacle,
@@ -68,10 +59,18 @@ export const addWoop = async (data: any) => {
   });
 };
 
-export const getWoops = async () => {
-  return await buscarWoops('usr_victor');
+export const getWoops = async (pacienteId: string = 'usr_victor') => {
+  return await buscarWoops(pacienteId);
 };
 
-export const getWidgetsUsuario = async () => {
-  return await buscarWidgetsUsuario('usr_victor');
+export const getWidgetsUsuario = async (userId: string = 'usr_victor') => {
+  return await buscarWidgetsUsuario(userId);
+};
+
+export const salvarRevisao = async (dados: {
+  pacienteId: string;
+  dataLogica: string;
+  respostaReflexao: string;
+}) => {
+  return await salvarRevisaoDiaria(dados);
 };

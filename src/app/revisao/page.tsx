@@ -1,38 +1,66 @@
 'use client';
+
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../../context/AuthContext';
+import { getRegistrosDeHoje, salvarRevisao } from '../actions';
+import { getLogicalDateString } from '../../lib/dateUtils';
+import { RegistroData } from '../../types/database';
 
 type Phase = 'loading_init' | 'timeline' | 'loading_ai' | 'ai_feedback' | 'done';
 
 export default function RevisaoDoDia() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [phase, setPhase] = useState<Phase>('loading_init');
   const [reflexao, setReflexao] = useState("");
+  const [registrosHoje, setRegistrosHoje] = useState<RegistroData[]>([]);
 
-  // Registros simulados para o resumo
-  const registrosMock = [
-    { id: 1, hora: "06:30", titulo: "Horas de Sono", detalhe: "6:30h dormidas (Ótima)", emoji: "😴" },
-    { id: 2, hora: "08:15", titulo: "Medicação", detalhe: "50mg registrada", emoji: "💊" },
-    { id: 3, hora: "10:30", titulo: "Como estou me sentindo", detalhe: "Ansiedade, Taquicardia", emoji: "🧠" },
-  ];
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login');
+      return;
+    }
+
+    if (user?.uid) {
+      getRegistrosDeHoje(user.uid).then(hoje => {
+        const list: RegistroData[] = [];
+        if (hoje.sono) list.push(hoje.sono);
+        if (hoje.medicacao) list.push(hoje.medicacao);
+        list.push(...hoje.sentimentos);
+        setRegistrosHoje(list);
+      }).catch(console.error);
+    }
+  }, [user, authLoading, router]);
 
   // Simulação dos tempos de carregamento
   useEffect(() => {
     if (phase === 'loading_init') {
-      const timer = setTimeout(() => setPhase('timeline'), 2000);
+      const timer = setTimeout(() => setPhase('timeline'), 1500);
       return () => clearTimeout(timer);
     }
     if (phase === 'loading_ai') {
-      const timer = setTimeout(() => setPhase('ai_feedback'), 3000);
+      const timer = setTimeout(() => setPhase('ai_feedback'), 2500);
       return () => clearTimeout(timer);
     }
   }, [phase]);
 
-  const handleEnviarReflexao = () => {
+  const handleEnviarReflexao = async () => {
+    if (user?.uid) {
+      try {
+        await salvarRevisao({
+          pacienteId: user.uid,
+          dataLogica: getLogicalDateString(),
+          respostaReflexao: reflexao,
+        });
+      } catch (err) {
+        console.error('Erro ao salvar reflexão:', err);
+      }
+    }
     setPhase('done');
     setTimeout(() => {
       router.push('/');
-    }, 3000);
+    }, 2500);
   };
 
   return (
@@ -70,27 +98,37 @@ export default function RevisaoDoDia() {
         {phase === 'timeline' && (
           <div className="animate-fade-in-up flex flex-col flex-1">
             <p className="text-sm text-gray-400 mb-6 font-medium">
-              Veja como foi seu dia hoje ↓
+              Veja o que você anotou hoje ↓
             </p>
 
-            <div className="relative pl-4 space-y-5 mb-8">
-              <div className="absolute left-[27px] top-4 bottom-4 w-px bg-surface/70"></div>
-              {registrosMock.map((reg) => (
-                <div key={reg.id} className="flex gap-4 relative">
-                  <div className="flex flex-col items-center mt-1 z-10 w-12 flex-shrink-0">
-                    <span className="text-xs font-bold text-gray-500 mb-1">{reg.hora}</span>
-                    <div className="w-3 h-3 bg-gray-700 rounded-full border-4 border-slate-950"></div>
-                  </div>
-                  <div className="flex-1 bg-surface/50 border border-gray-700/50 rounded-2xl p-3 flex gap-3 opacity-80">
-                    <div className="text-xl mt-0.5">{reg.emoji}</div>
-                    <div>
-                      <h3 className="font-semibold text-gray-300 text-sm">{reg.titulo}</h3>
-                      <p className="text-gray-500 text-xs mt-1">{reg.detalhe}</p>
+            {registrosHoje.length === 0 ? (
+              <div className="bg-surface/50 border border-gray-700/50 rounded-2xl p-6 text-center mb-8">
+                <span className="text-3xl mb-2 block">📝</span>
+                <p className="text-sm text-gray-300 font-medium">Você ainda não registrou nada hoje.</p>
+                <p className="text-xs text-gray-500 mt-1">Ainda assim, você pode refletir sobre seu dia com o Blu!</p>
+              </div>
+            ) : (
+              <div className="relative pl-4 space-y-5 mb-8">
+                <div className="absolute left-[27px] top-4 bottom-4 w-px bg-surface/70"></div>
+                {registrosHoje.map((reg, index) => (
+                  <div key={reg.id || index} className="flex gap-4 relative">
+                    <div className="flex flex-col items-center mt-1 z-10 w-12 flex-shrink-0">
+                      <span className="text-xs font-bold text-gray-500 mb-1">{reg.hora}</span>
+                      <div className="w-3 h-3 bg-gray-700 rounded-full border-4 border-slate-950"></div>
+                    </div>
+                    <div className="flex-1 bg-surface/50 border border-gray-700/50 rounded-2xl p-3 flex gap-3 opacity-90">
+                      <div className="text-xl mt-0.5">{reg.emoji}</div>
+                      <div>
+                        <h3 className="font-semibold text-gray-200 text-sm">
+                          {reg.titulo} {reg.qualidade}
+                        </h3>
+                        <p className="text-gray-400 text-xs mt-1">{reg.detalhe}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             <div className="mt-auto pt-4">
               <button 
@@ -131,18 +169,18 @@ export default function RevisaoDoDia() {
               </div>
               <div className="pl-8 pt-2">
                 <p className="text-sm text-indigo-100 leading-relaxed mb-4">
-                  <strong>Olá, Victor!</strong> Muito bem por ter mantido seus registros hoje. Vi que você conseguiu dormir boas horas e tomou a medicação certinho. Parabéns! 💙
+                  <strong>Olá, {user?.displayName || 'Paciente'}!</strong> Muito bem por ter mantido seus registros hoje. A consistência no autocuidado é o passo mais importante. Parabéns! 💙
                 </p>
                 <p className="text-sm text-indigo-200 leading-relaxed mb-5">
-                  No entanto, notei que pela manhã você relatou sintomas de <strong>Ansiedade</strong> e <strong>Taquicardia</strong>. 
+                  Analisando seus dados de hoje, preparei estas perguntas para você refletir antes de descansar:
                 </p>
                 
                 {/* Perguntas de Reflexão */}
                 <div className="bg-surface/50 rounded-2xl p-4 border border-primary/20">
                   <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Questões para refletir:</h3>
                   <ul className="text-sm text-gray-300 space-y-2 list-disc pl-4 marker:text-primary">
-                    <li>O que você acha que pode ter engatilhado essa ansiedade pela manhã?</li>
-                    <li>Como você lidou com ela ao longo do dia? O que te ajudou a se acalmar?</li>
+                    <li>Qual foi o momento mais tranquilo do seu dia de hoje?</li>
+                    <li>Teve algo que te gerou desconforto ou ansiedade? O que você fez para contornar?</li>
                   </ul>
                 </div>
               </div>
@@ -157,7 +195,7 @@ export default function RevisaoDoDia() {
                 <textarea 
                   value={reflexao}
                   onChange={(e) => setReflexao(e.target.value)}
-                  placeholder="Hoje a ansiedade começou quando..."
+                  placeholder="Hoje o meu dia foi..."
                   className="w-full bg-transparent text-sm text-white placeholder-slate-500 resize-none h-24 p-2 focus:outline-none"
                 />
                 <div className="flex justify-between items-center px-2 pb-1">
@@ -186,7 +224,7 @@ export default function RevisaoDoDia() {
               ✓
             </div>
             <h2 className="text-xl font-bold text-white mb-2">Revisão Concluída!</h2>
-            <p className="text-sm text-gray-400">Obrigado por cuidar de si mesmo hoje.<br/>Amanhã estamos de volta!</p>
+            <p className="text-sm text-gray-400">Sua reflexão foi salva com sucesso.<br/>Descanse bem e até amanhã!</p>
           </div>
         )}
 

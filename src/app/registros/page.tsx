@@ -3,15 +3,8 @@ import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { getRegistros } from '../actions';
-
-// Helpers para agrupar as datas com a regra das 02:00 AM
-function getLogicalDate(dateStr: string | Date) {
-  const d = new Date(dateStr);
-  if (d.getHours() < 2) {
-    d.setDate(d.getDate() - 1);
-  }
-  return d;
-}
+import { useAuth } from '../../context/AuthContext';
+import { getLogicalDate } from '../../lib/dateUtils';
 
 function formatDate(date: Date) {
   return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
@@ -30,12 +23,19 @@ function isYesterday(date: Date) {
 
 export default function MeusRegistros() {
   const router = useRouter();
+  const { user, loading } = useAuth();
   const [registros, setRegistros] = useState<any[]>([]);
   const [filtroData, setFiltroData] = useState<string>('todos');
 
   React.useEffect(() => {
-    getRegistros().then(setRegistros).catch(console.error);
-  }, []);
+    if (!loading && !user) {
+      router.replace('/login');
+      return;
+    }
+    if (user?.uid) {
+      getRegistros(user.uid).then(setRegistros).catch(console.error);
+    }
+  }, [user, loading, router]);
 
   const groupedRegistros = useMemo(() => {
     const groups: Record<string, { dateObj: Date, sono: any[], timeline: any[] }> = {};

@@ -3,16 +3,20 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut as fbSignOut, 
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
-import { auth, isFirebaseConfigured } from '../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db, isFirebaseConfigured } from '../lib/firebase';
 
 interface AuthContextType {
   user: { uid: string; email: string | null; displayName: string | null } | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<{ success: boolean; message?: string }>;
+  register: (email: string, pass: string, name: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -20,8 +24,26 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   login: async () => ({ success: false }),
+  register: async () => ({ success: false }),
   logout: async () => {},
 });
+
+function traduzirErroFirebase(code?: string): string {
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return 'E-mail ou senha incorretos.';
+    case 'auth/email-already-in-use':
+      return 'Este e-mail já está cadastrado. Tente fazer login.';
+    case 'auth/weak-password':
+      return 'A senha deve conter no mínimo 6 caracteres.';
+    case 'auth/invalid-email':
+      return 'Formato de e-mail inválido.';
+    default:
+      return 'Ocorreu um erro na autenticação. Verifique os dados e tente novamente.';
+  }
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthContextType['user']>(null);
@@ -34,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser({
             uid: fbUser.uid,
             email: fbUser.email,
-            displayName: fbUser.displayName || 'Paciente',
+            displayName: fbUser.displayName || fbUser.email?.split('@')[0] || 'Paciente',
           });
           localStorage.setItem('auth_token', fbUser.uid);
         } else {
@@ -45,7 +67,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       return () => unsubscribe();
     } else {
-      // Modo Mock/Offline enquanto não há chaves no .env.local
       const savedToken = localStorage.getItem('auth_token');
       if (savedToken) {
         setUser({
@@ -61,27 +82,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, pass: string) => {
     if (isFirebaseConfigured) {
       try {
-        const credential = await signInWithEmailAndPassword(auth, email, pass);
-        setUser({
-          uid: credential.user.uid,
-          email: credential.user.email,
-          displayName: credential.user.displayName || 'Paciente',
-        });
-        localStorage.setItem('auth_token', credential.user.uid);
+        const credential = await signInWithEmailAndPassword(auth, email.trim(), pass);
+        const fbUser = credential.user;
+        const loggedUser = {
+          uid: fbUser.uid,
+          email: fbUser.email,
+          displayName: fbUser.displayName || fbUser.email?.split('@')[0] || 'Paciente',
+        };
+        setUser(loggedUser);
+        localStorage.setItem('auth_token', fbUser.uid);
         return { success: true };
       } catch (err: any) {
         return { 
           success: false, 
-          message: err.message || 'Erro ao realizar login no Firebase' 
+          message: traduzirErroFirebase(err?.code) 
         };
       }
     } else {
-      // Fallback para desenvolvimento inicial
       localStorage.setItem('auth_token', 'usr_victor_simulated');
       setUser({
         uid: 'usr_victor',
         email,
         displayName: 'Vitor H.',
+      });
+      return { success: true };
+    }
+  };
+
+  const register = async (email: string, pass: string, name: string) => {
+    if (isFirebaseConfigured) {
+      try {
+        const credential = await createUserWithEmailAndPassword(auth, email.trim(), pass);
+        const fbUser = credential.user;
+        
+        // Atualizar o nome do perfil no Firebase Auth
+        await updateProfile(fbUser, { displayName: name.trim() });
+        
+        // Criar registro na coleção 'users' do Firestore
+        try {
+          await setDoc(doc(db, 'users', fbUser.uid), {
+            uid: fbUser.uid,
+            nome: name.trim(),
+            email: fbUser.email,
+            role: 'PACIENTE',
+            createdAt: new Date().toISOString(),
+          });
+        } catch (dbErr) {
+          console.warn('Erro ao salvar documento do usuário no Firestore:', dbErr);
+        }
+
+        const newUser = {
+          uid: fbUser.uid,
+          email: fbUser.email,
+          displayName: name.trim(),
+        };
+        setUser(newUser);
+        localStorage.setItem('auth_token', fbUser.uid);
+        return { success: true };
+      } catch (err: any) {
+        return {
+          success: false,
+          message: traduzirErroFirebase(err?.code)
+        };
+      }
+    } else {
+      localStorage.setItem('auth_token', 'usr_novo_simulated');
+      setUser({
+        uid: 'usr_novo',
+        email,
+        displayName: name,
       });
       return { success: true };
     }
@@ -96,7 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
