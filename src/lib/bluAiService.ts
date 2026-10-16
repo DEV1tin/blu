@@ -203,8 +203,8 @@ ${resumoDia}
       required: ['mensagemDoBlu', 'perguntasReflexao'],
     });
 
-    // Tenta o modelo mais recente suportado pelo Firebase AI Logic (gemini-3.8-flash), com fallback para gemini-2.5-flash
-    const modelosParaTentar = ['gemini-3.8-flash', 'gemini-2.5-flash'];
+    // Tenta os modelos suportados pelo Firebase AI Logic (gemini-3.8-flash e gemini-3.5-flash-lite)
+    const modelosParaTentar = ['gemini-3.8-flash', 'gemini-3.5-flash-lite'];
     let ultimoErro: any = null;
 
     for (const nomeModelo of modelosParaTentar) {
