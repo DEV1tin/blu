@@ -40,8 +40,12 @@ function traduzirErroFirebase(code?: string): string {
       return 'A senha deve conter no mínimo 6 caracteres.';
     case 'auth/invalid-email':
       return 'Formato de e-mail inválido.';
+    case 'auth/too-many-requests':
+      return 'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.';
+    case 'auth/network-request-failed':
+      return 'Falha de conexão com a internet. Verifique sua rede.';
     default:
-      return 'Ocorreu um erro na autenticação. Verifique os dados e tente novamente.';
+      return `Erro na autenticação (${code || 'desconhecido'}). Tente novamente.`;
   }
 }
 
