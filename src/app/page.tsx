@@ -451,7 +451,6 @@ export default function Home() {
             <h1 className="text-xl font-bold text-white tracking-tight">
               Olá, {user?.displayName || 'Paciente'}
             </h1>
-            <p className="text-xs text-gray-400">Dr. {configMedico.nomeMedico}</p>
           </div>
         </div>
         

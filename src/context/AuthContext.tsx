@@ -5,18 +5,27 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   updateProfile,
+  updateEmail,
+  updatePassword,
   signOut as fbSignOut, 
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from '../lib/firebase';
+import { atualizarPerfilUsuario } from '../lib/dbService';
 
 interface AuthContextType {
   user: { uid: string; email: string | null; displayName: string | null } | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<{ success: boolean; message?: string }>;
   register: (email: string, pass: string, name: string) => Promise<{ success: boolean; message?: string }>;
+  updateUserProfile: (dados: {
+    nome?: string;
+    email?: string;
+    senha?: string;
+    medicoResponsavel?: string;
+  }) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -25,6 +34,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
+  updateUserProfile: async () => ({ success: false }),
   logout: async () => {},
 });
 
@@ -35,15 +45,17 @@ function traduzirErroFirebase(code?: string): string {
     case 'auth/user-not-found':
       return 'E-mail ou senha incorretos.';
     case 'auth/email-already-in-use':
-      return 'Este e-mail já está cadastrado. Tente fazer login.';
+      return 'Este e-mail já está cadastrado em outra conta.';
     case 'auth/weak-password':
-      return 'A senha deve conter no mínimo 6 caracteres.';
+      return 'A nova senha deve conter no mínimo 6 caracteres.';
     case 'auth/invalid-email':
       return 'Formato de e-mail inválido.';
     case 'auth/too-many-requests':
       return 'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.';
     case 'auth/network-request-failed':
       return 'Falha de conexão com a internet. Verifique sua rede.';
+    case 'auth/requires-recent-login':
+      return 'Por segurança, para alterar e-mail ou senha você precisa ter feito login recentemente. Faça logout e login novamente para continuar.';
     default:
       return `Erro na autenticação (${code || 'desconhecido'}). Tente novamente.`;
   }
@@ -129,6 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             nome: name.trim(),
             email: fbUser.email,
             role: 'PACIENTE',
+            medicoResponsavel: '',
             createdAt: new Date().toISOString(),
           });
         } catch (dbErr) {
@@ -160,6 +173,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserProfile = async (dados: {
+    nome?: string;
+    email?: string;
+    senha?: string;
+    medicoResponsavel?: string;
+  }): Promise<{ success: boolean; message?: string }> => {
+    if (isFirebaseConfigured && auth.currentUser) {
+      const fbUser = auth.currentUser;
+      try {
+        // 1. Atualizar Nome
+        if (dados.nome && dados.nome.trim() !== fbUser.displayName) {
+          await updateProfile(fbUser, { displayName: dados.nome.trim() });
+        }
+
+        // 2. Atualizar E-mail
+        if (dados.email && dados.email.trim() !== fbUser.email) {
+          await updateEmail(fbUser, dados.email.trim());
+        }
+
+        // 3. Atualizar Senha
+        if (dados.senha && dados.senha.trim().length >= 6) {
+          await updatePassword(fbUser, dados.senha.trim());
+        }
+
+        // 4. Atualizar Firestore
+        await atualizarPerfilUsuario(fbUser.uid, {
+          nome: dados.nome?.trim(),
+          email: dados.email?.trim() || fbUser.email || '',
+          medicoResponsavel: dados.medicoResponsavel?.trim(),
+        });
+
+        // 5. Atualizar estado local do React
+        setUser({
+          uid: fbUser.uid,
+          email: dados.email?.trim() || fbUser.email,
+          displayName: dados.nome?.trim() || fbUser.displayName || 'Paciente',
+        });
+
+        return { success: true };
+      } catch (err: any) {
+        return {
+          success: false,
+          message: traduzirErroFirebase(err?.code),
+        };
+      }
+    } else if (user) {
+      // Modo offline fallback
+      setUser({
+        uid: user.uid,
+        email: dados.email || user.email,
+        displayName: dados.nome || user.displayName,
+      });
+      await atualizarPerfilUsuario(user.uid, {
+        nome: dados.nome,
+        email: dados.email,
+        medicoResponsavel: dados.medicoResponsavel,
+      });
+      return { success: true };
+    }
+    return { success: false, message: 'Usuário não autenticado.' };
+  };
+
   const logout = async () => {
     if (isFirebaseConfigured) {
       await fbSignOut(auth);
@@ -169,7 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, updateUserProfile, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -74,3 +74,13 @@ export const salvarRevisao = async (dados: {
 }) => {
   return await salvarRevisaoDiaria(dados);
 };
+
+export const getPerfilUsuario = async (uid: string) => {
+  const { buscarPerfilUsuario } = await import('../lib/dbService');
+  return await buscarPerfilUsuario(uid);
+};
+
+export const setPerfilUsuario = async (uid: string, dados: any) => {
+  const { atualizarPerfilUsuario } = await import('../lib/dbService');
+  return await atualizarPerfilUsuario(uid, dados);
+};

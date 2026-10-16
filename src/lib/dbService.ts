@@ -211,3 +211,46 @@ export async function buscarWidgetsUsuario(userId: string): Promise<UserWidgetCo
   const custom = getLocalData<UserWidgetConfig[]>(`${STORAGE_KEY_WIDGETS}_${userId}`, DEFAULT_USER_WIDGETS);
   return resolveUserWidgets(custom);
 }
+
+/**
+ * Busca dados completos do perfil do usuário no Firestore
+ */
+export async function buscarPerfilUsuario(uid: string): Promise<{
+  nome?: string;
+  email?: string;
+  medicoResponsavel?: string;
+} | null> {
+  if (isFirebaseConfigured && uid) {
+    try {
+      const docRef = doc(db, 'users', uid);
+      const snapshot = await getDoc(docRef);
+      if (snapshot.exists()) {
+        return snapshot.data() as any;
+      }
+    } catch (e) {
+      console.warn('Erro ao buscar perfil no Firestore:', e);
+    }
+  }
+  return getLocalData(`blu_profile_${uid}`, null);
+}
+
+/**
+ * Atualiza dados do perfil do usuário no Firestore
+ */
+export async function atualizarPerfilUsuario(uid: string, dados: {
+  nome?: string;
+  email?: string;
+  medicoResponsavel?: string;
+}) {
+  if (isFirebaseConfigured && uid) {
+    try {
+      const docRef = doc(db, 'users', uid);
+      await setDoc(docRef, { ...dados, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.warn('Erro ao atualizar perfil no Firestore:', e);
+    }
+  }
+  const local = getLocalData<any>(`blu_profile_${uid}`, {});
+  setLocalData(`blu_profile_${uid}`, { ...local, ...dados });
+}
+
