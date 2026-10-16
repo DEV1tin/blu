@@ -2,8 +2,11 @@ import {
   salvarRegistro, 
   buscarRegistros, 
   buscarRegistrosDeHoje, 
-  salvarWoop, 
+  salvarWoop as dbSalvarWoop, 
+  salvarOuAtualizarWoop,
   buscarWoops, 
+  buscarWoopDeHoje,
+  excluirWoop as dbExcluirWoop,
   buscarWidgetsUsuario,
   salvarRevisaoDiaria
 } from '../lib/dbService';
@@ -49,7 +52,8 @@ export const getRegistrosDeHoje = async (pacienteId: string = 'usr_victor') => {
 };
 
 export const addWoop = async (data: any, pacienteId: string = 'usr_victor') => {
-  return await salvarWoop({
+  return await salvarOuAtualizarWoop({
+    id: data.id,
     pacienteId,
     wish: data.wish,
     outcome: data.outcome,
@@ -57,6 +61,26 @@ export const addWoop = async (data: any, pacienteId: string = 'usr_victor') => {
     plan: data.plan,
     ativo: true
   });
+};
+
+export const salvarWoop = async (data: any, pacienteId: string = 'usr_victor') => {
+  return await salvarOuAtualizarWoop({
+    id: data.id,
+    pacienteId,
+    wish: data.wish,
+    outcome: data.outcome,
+    obstacle: data.obstacle,
+    plan: data.plan,
+    ativo: true
+  });
+};
+
+export const getWoopDeHoje = async (pacienteId: string = 'usr_victor') => {
+  return await buscarWoopDeHoje(pacienteId);
+};
+
+export const excluirWoop = async (woopId: string) => {
+  return await dbExcluirWoop(woopId);
 };
 
 export const getWoops = async (pacienteId: string = 'usr_victor') => {

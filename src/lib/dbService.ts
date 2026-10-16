@@ -7,6 +7,8 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
+  deleteDoc,
   Timestamp 
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
@@ -124,12 +126,80 @@ export async function buscarRegistrosDeHoje(pacienteId: string): Promise<{
 }
 
 /**
- * Salva uma nova meta WOOP
+ * Salva ou atualiza o WOOP do dia (garantindo apenas 1 por dia clínico)
  */
-export async function salvarWoop(woop: Omit<WoopData, 'createdAt'>): Promise<WoopData> {
+export async function salvarOuAtualizarWoop(woop: {
+  id?: string;
+  pacienteId: string;
+  wish: string;
+  outcome?: string;
+  obstacle?: string;
+  plan?: string;
+  ativo?: boolean;
+}): Promise<WoopData> {
+  const dataLogicaHoje = getLogicalDateString();
+  const agora = new Date().toISOString();
+
+  // Se já temos um id explícito para editar
+  if (woop.id) {
+    const dadosAtualizados: Partial<WoopData> = {
+      wish: woop.wish,
+      outcome: woop.outcome || '',
+      obstacle: woop.obstacle || '',
+      plan: woop.plan || '',
+      updatedAt: agora,
+    };
+
+    if (isFirebaseConfigured) {
+      try {
+        const docRef = doc(db, 'woop_goals', woop.id);
+        await updateDoc(docRef, dadosAtualizados);
+      } catch (err) {
+        console.warn('Falha ao atualizar WOOP no Firestore, tentando local:', err);
+      }
+    }
+
+    const locais = getLocalData<WoopData[]>(STORAGE_KEY_WOOP, []);
+    const idx = locais.findIndex(w => w.id === woop.id);
+    if (idx !== -1) {
+      locais[idx] = { ...locais[idx], ...dadosAtualizados };
+      setLocalData(STORAGE_KEY_WOOP, locais);
+      return locais[idx];
+    }
+
+    return {
+      id: woop.id,
+      pacienteId: woop.pacienteId,
+      wish: woop.wish,
+      outcome: woop.outcome || '',
+      obstacle: woop.obstacle || '',
+      plan: woop.plan || '',
+      ativo: true,
+      dataLogica: dataLogicaHoje,
+      createdAt: agora,
+      updatedAt: agora,
+    };
+  }
+
+  // Se não foi passado id, verifica se já existe um WOOP hoje para este paciente
+  const woopExistenteHoje = await buscarWoopDeHoje(woop.pacienteId);
+  if (woopExistenteHoje?.id) {
+    return await salvarOuAtualizarWoop({
+      ...woop,
+      id: woopExistenteHoje.id,
+    });
+  }
+
+  // Cria um novo WOOP para o dia de hoje
   const novoWoop: WoopData = {
-    ...woop,
-    createdAt: new Date().toISOString(),
+    pacienteId: woop.pacienteId,
+    wish: woop.wish,
+    outcome: woop.outcome || '',
+    obstacle: woop.obstacle || '',
+    plan: woop.plan || '',
+    ativo: woop.ativo ?? true,
+    dataLogica: dataLogicaHoje,
+    createdAt: agora,
   };
 
   if (isFirebaseConfigured) {
@@ -154,7 +224,14 @@ export async function salvarWoop(woop: Omit<WoopData, 'createdAt'>): Promise<Woo
 }
 
 /**
- * Busca metas WOOP do paciente
+ * Alias de compatibilidade para salvar WOOP
+ */
+export async function salvarWoop(woop: Omit<WoopData, 'createdAt'>): Promise<WoopData> {
+  return await salvarOuAtualizarWoop(woop);
+}
+
+/**
+ * Busca todas as metas WOOP do paciente
  */
 export async function buscarWoops(pacienteId: string): Promise<WoopData[]> {
   if (isFirebaseConfigured && pacienteId) {
@@ -175,6 +252,47 @@ export async function buscarWoops(pacienteId: string): Promise<WoopData[]> {
   return getLocalData<WoopData[]>(STORAGE_KEY_WOOP, [])
     .filter(w => w.pacienteId === pacienteId || !w.pacienteId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+/**
+ * Busca exclusivamente o WOOP do dia lógico atual do paciente
+ */
+export async function buscarWoopDeHoje(pacienteId: string): Promise<WoopData | null> {
+  const dataLogicaHoje = getLogicalDateString();
+  const todos = await buscarWoops(pacienteId);
+
+  const woopHoje = todos.find(w => {
+    if (w.dataLogica) {
+      return w.dataLogica === dataLogicaHoje;
+    }
+    // Fallback para registros antigos sem dataLogica: compara a data de criação
+    try {
+      return getLogicalDateString(new Date(w.createdAt)) === dataLogicaHoje;
+    } catch {
+      return false;
+    }
+  });
+
+  return woopHoje || null;
+}
+
+/**
+ * Exclui um WOOP por ID
+ */
+export async function excluirWoop(woopId: string): Promise<boolean> {
+  if (isFirebaseConfigured && woopId && !woopId.startsWith('local_')) {
+    try {
+      const docRef = doc(db, 'woop_goals', woopId);
+      await deleteDoc(docRef);
+    } catch (err) {
+      console.warn('Falha ao excluir WOOP do Firestore:', err);
+    }
+  }
+
+  const locais = getLocalData<WoopData[]>(STORAGE_KEY_WOOP, []);
+  const filtrados = locais.filter(w => w.id !== woopId);
+  setLocalData(STORAGE_KEY_WOOP, filtrados);
+  return true;
 }
 
 /**

@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { addRegistro, getRegistrosDeHoje, getWidgetsUsuario } from './actions';
+import { addRegistro, getRegistrosDeHoje, getWidgetsUsuario, getWoopDeHoje, excluirWoop } from './actions';
 import { UserWidgetConfig } from '../types/widgets';
+import { WoopData } from '../types/database';
 import { DEFAULT_USER_WIDGETS } from '../lib/widgetDefaults';
 import { useAuth } from '../context/AuthContext';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
@@ -46,6 +47,9 @@ export default function Home() {
   const [sonoHoras, setSonoHoras] = useState("6:00h");
   const [sonoQualidade, setSonoQualidade] = useState("");
 
+  // States: WOOP Diário
+  const [woopHoje, setWoopHoje] = useState<WoopData | null>(null);
+
   const uid = user?.uid || 'usr_victor';
 
   useEffect(() => {
@@ -75,6 +79,9 @@ export default function Home() {
           setSonoFeito(false);
         }
       }).catch(console.error);
+
+      // Carregar WOOP de HOJE
+      getWoopDeHoje(user.uid).then(setWoopHoje).catch(console.error);
     }
   }, [user, authLoading, router]);
 
@@ -379,20 +386,126 @@ export default function Home() {
       case 'woop':
         return (
           <section className="mb-6">
-            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 ml-1">Minhas Ferramentas</h2>
-            <div 
-              onClick={() => router.push('/woop')}
-              className="bg-surface rounded-3xl p-5 border border-gray-700/50 cursor-pointer group hover:border-gray-600/50 transition-colors"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-xl">🎯</span>
-                <h3 className="font-bold text-white">WOOP Diário</h3>
-              </div>
-              <p className="text-xs text-gray-400 mb-4">Qual seu desejo principal para hoje e o que te impede?</p>
-              <div className="w-full bg-surface/70 text-gray-300 font-semibold py-2.5 rounded-xl text-xs text-center group-hover:bg-gray-700 transition-colors">
-                Preencher Ferramenta
-              </div>
+            <div className="flex items-center justify-between mb-2 ml-1">
+              <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                Minhas Ferramentas
+              </h2>
+              {woopHoje && (
+                <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
+                  WOOP de Hoje Ativo
+                </span>
+              )}
             </div>
+
+            {!woopHoje ? (
+              /* Estado Pendente: Convite para definir o WOOP do dia */
+              <div 
+                onClick={() => router.push('/woop')}
+                className="bg-surface rounded-3xl p-5 border border-gray-700/50 cursor-pointer group hover:border-primary/40 transition-colors shadow-md"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl">🎯</span>
+                    <h3 className="font-bold text-white text-sm">WOOP Diário</h3>
+                  </div>
+                  <span className="text-[11px] text-gray-500 font-medium">Pendente hoje</span>
+                </div>
+                <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+                  Defina um único desejo para hoje, antecipe obstáculos e trace um plano rápido.
+                </p>
+                <div className="w-full bg-surface/80 text-primary border border-primary/30 font-semibold py-2.5 rounded-xl text-xs text-center group-hover:bg-primary group-hover:text-[#121826] transition-all">
+                  Definir WOOP de Hoje
+                </div>
+              </div>
+            ) : (
+              /* Estado Preenchido: Resumo Aparente na Home com opções de expandir/editar/excluir */
+              <div 
+                onClick={() => router.push('/woop')}
+                className="bg-surface rounded-3xl p-5 border border-primary/30 cursor-pointer group hover:border-primary/60 transition-all shadow-lg relative overflow-hidden"
+              >
+                {/* Cabeçalho do Card com Ações Rápidas */}
+                <div className="flex items-center justify-between mb-3 border-b border-gray-700/40 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🎯</span>
+                    <h3 className="font-bold text-white text-sm">Meu WOOP de Hoje</h3>
+                  </div>
+
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/woop')}
+                      className="px-2.5 py-1 bg-surface/80 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg border border-gray-700 text-xs transition-colors flex items-center gap-1"
+                      title="Editar WOOP"
+                    >
+                      ✏️ <span className="text-[11px]">Editar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (window.confirm('Deseja excluir o WOOP de hoje?')) {
+                          if (woopHoje.id) {
+                            await excluirWoop(woopHoje.id);
+                            setWoopHoje(null);
+                          }
+                        }
+                      }}
+                      className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg border border-gray-700 hover:border-red-500/30 text-xs transition-colors"
+                      title="Excluir WOOP"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+
+                {/* Resumo aparente dos 4 passos */}
+                <div className="space-y-2 text-xs">
+                  {/* W - Wish */}
+                  <div className="bg-background/80 rounded-xl p-2.5 border border-primary/20">
+                    <span className="text-primary font-bold uppercase tracking-wider block text-[10px] mb-0.5">
+                      Wish (Desejo)
+                    </span>
+                    <p className="text-gray-100 font-medium leading-snug">{woopHoje.wish}</p>
+                  </div>
+
+                  {/* O - Outcome */}
+                  {woopHoje.outcome && (
+                    <div className="bg-background/60 rounded-xl p-2.5 border border-green-500/20">
+                      <span className="text-green-400 font-bold uppercase tracking-wider block text-[10px] mb-0.5">
+                        Outcome (Melhor Resultado)
+                      </span>
+                      <p className="text-gray-200 leading-snug">{woopHoje.outcome}</p>
+                    </div>
+                  )}
+
+                  {/* O - Obstacle */}
+                  {woopHoje.obstacle && (
+                    <div className="bg-background/60 rounded-xl p-2.5 border border-orange-500/20">
+                      <span className="text-orange-400 font-bold uppercase tracking-wider block text-[10px] mb-0.5">
+                        Obstacle (Obstáculo Interno)
+                      </span>
+                      <p className="text-gray-200 leading-snug">{woopHoje.obstacle}</p>
+                    </div>
+                  )}
+
+                  {/* P - Plan */}
+                  {woopHoje.plan && (
+                    <div className="bg-background/60 rounded-xl p-2.5 border border-blue-500/20">
+                      <span className="text-blue-400 font-bold uppercase tracking-wider block text-[10px] mb-0.5">
+                        Plan (Plano Se... Então...)
+                      </span>
+                      <p className="text-gray-200 leading-snug">{woopHoje.plan}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dica de clique para expandir */}
+                <div className="mt-3.5 pt-2 border-t border-gray-700/30 flex items-center justify-between text-[11px] text-gray-500">
+                  <span>Toque no card para ver detalhes ou editar</span>
+                  <span className="text-primary font-bold group-hover:translate-x-0.5 transition-transform">↗</span>
+                </div>
+              </div>
+            )}
           </section>
         );
 

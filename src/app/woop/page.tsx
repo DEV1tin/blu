@@ -1,18 +1,25 @@
 'use client';
+
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { addWoop, getWoops } from '../actions';
+import { salvarWoop, getWoopDeHoje, excluirWoop } from '../actions';
 import { useAuth } from '../../context/AuthContext';
+import { WoopData } from '../../types/database';
 
-export default function WOOPForm() {
+export default function WOOPPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [wish, setWish] = useState("");
-  const [outcome, setOutcome] = useState("");
-  const [obstacle, setObstacle] = useState("");
-  const [plan, setPlan] = useState("");
-  const [lista, setLista] = useState<any[]>([]);
+  
+  const [woopId, setWoopId] = useState<string | undefined>(undefined);
+  const [wish, setWish] = useState('');
+  const [outcome, setOutcome] = useState('');
+  const [obstacle, setObstacle] = useState('');
+  const [plan, setPlan] = useState('');
+  
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
   const uid = user?.uid || 'usr_victor';
 
@@ -21,72 +28,224 @@ export default function WOOPForm() {
       router.replace('/login');
       return;
     }
+
     if (user?.uid) {
-      getWoops(user.uid).then(setLista).catch(console.error);
+      setIsLoading(true);
+      getWoopDeHoje(user.uid)
+        .then((hoje: WoopData | null) => {
+          if (hoje) {
+            setWoopId(hoje.id);
+            setWish(hoje.wish || '');
+            setOutcome(hoje.outcome || '');
+            setObstacle(hoje.obstacle || '');
+            setPlan(hoje.plan || '');
+          } else {
+            setWoopId(undefined);
+            setWish('');
+            setOutcome('');
+            setObstacle('');
+            setPlan('');
+          }
+        })
+        .catch(console.error)
+        .finally(() => setIsLoading(false));
     }
   }, [user, loading, router]);
 
-  const handleAdd = async () => {
-    if(!wish) return;
+  const handleSalvar = async () => {
+    if (!wish.trim()) return;
     setIsSubmitting(true);
+    setFeedbackMsg(null);
+
     try {
-      const newWoop = await addWoop({ wish, outcome, obstacle, plan }, uid);
-      setLista([newWoop, ...lista]);
-      setWish(""); setOutcome(""); setObstacle(""); setPlan("");
+      await salvarWoop(
+        {
+          id: woopId,
+          wish: wish.trim(),
+          outcome: outcome.trim(),
+          obstacle: obstacle.trim(),
+          plan: plan.trim(),
+        },
+        uid
+      );
+      setFeedbackMsg('WOOP salvo com sucesso!');
+      setTimeout(() => {
+        router.push('/');
+      }, 1000);
     } catch (e) {
-      console.error(e);
+      console.error('Erro ao salvar WOOP:', e);
+      setFeedbackMsg('Erro ao salvar WOOP. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleExcluir = async () => {
+    if (!woopId) return;
+    const confirmou = window.confirm('Tem certeza que deseja excluir o WOOP de hoje?');
+    if (!confirmou) return;
+
+    setIsDeleting(true);
+    try {
+      await excluirWoop(woopId);
+      setWoopId(undefined);
+      setWish('');
+      setOutcome('');
+      setObstacle('');
+      setPlan('');
+      setFeedbackMsg('WOOP excluído com sucesso.');
+      setTimeout(() => {
+        router.push('/');
+      }, 1000);
+    } catch (e) {
+      console.error('Erro ao excluir WOOP:', e);
+      alert('Erro ao excluir WOOP.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
-    <main className="flex-1 flex flex-col p-6 bg-background min-h-screen overflow-y-auto">
-      <header className="flex items-center gap-4 mb-8">
-        <button onClick={() => router.back()} className="w-10 h-10 bg-surface border border-gray-700/50 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+    <main className="flex-1 flex flex-col p-6 bg-background min-h-screen overflow-y-auto pb-12">
+      {/* Header */}
+      <header className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => router.push('/')}
+          className="w-10 h-10 bg-surface border border-gray-700/50 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+          </svg>
         </button>
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Ferramenta WOOP</h1>
-          <p className="text-xs text-gray-400">Defina e alcance seus objetivos</p>
+          <h1 className="text-xl font-bold text-white tracking-tight">
+            {woopId ? 'Editar WOOP do Dia' : 'WOOP do Dia'}
+          </h1>
+          <p className="text-xs text-gray-400">
+            {woopId ? 'Atualize ou gerencie o seu foco de hoje' : 'Um único foco intencional para hoje'}
+          </p>
         </div>
       </header>
 
-      <div className="bg-surface border border-gray-700/50 rounded-3xl p-5 mb-8 animate-fade-in-up">
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-bold text-primary uppercase">Wish (Desejo)</label>
-            <input type="text" value={wish} onChange={e=>setWish(e.target.value)} placeholder="O que você quer muito realizar?" className="w-full bg-background border border-gray-600/50/50 rounded-xl px-4 py-3 mt-1 text-sm text-white focus:outline-none focus:border-primary transition-colors" />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-green-400 uppercase">Outcome (Resultado)</label>
-            <input type="text" value={outcome} onChange={e=>setOutcome(e.target.value)} placeholder="Como você se sentirá ao realizar isso?" className="w-full bg-background border border-gray-600/50/50 rounded-xl px-4 py-3 mt-1 text-sm text-white focus:outline-none focus:border-primary transition-colors" />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-orange-400 uppercase">Obstacle (Obstáculo)</label>
-            <input type="text" value={obstacle} onChange={e=>setObstacle(e.target.value)} placeholder="O que dentro de você impede isso?" className="w-full bg-background border border-gray-600/50/50 rounded-xl px-4 py-3 mt-1 text-sm text-white focus:outline-none focus:border-primary transition-colors" />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-blue-400 uppercase">Plan (Plano)</label>
-            <input type="text" value={plan} onChange={e=>setPlan(e.target.value)} placeholder="Se [obstáculo], então eu vou [ação]" className="w-full bg-background border border-gray-600/50/50 rounded-xl px-4 py-3 mt-1 text-sm text-white focus:outline-none focus:border-primary transition-colors" />
-          </div>
-          <button onClick={handleAdd} disabled={!wish || isSubmitting} className="w-full bg-primary hover:bg-[#8ab08f] disabled:opacity-50 text-[#1A1A1A] font-nunito font-bold py-3.5 rounded-xl text-sm transition-colors mt-2">
-            {isSubmitting ? 'Salvando...' : 'Adicionar WOOP'}
-          </button>
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+          Carregando WOOP...
         </div>
-      </div>
-
-      {lista.length > 0 && (
-        <div className="space-y-4 animate-fade-in">
-          <h2 className="text-sm font-bold text-gray-400 uppercase ml-1">Meus WOOPs Ativos</h2>
-          {lista.map(item => (
-            <div key={item.id} className="bg-surface border border-gray-700/50 rounded-2xl p-4">
-              <h3 className="font-bold text-white text-sm mb-2 border-b border-gray-700/50 pb-2"><strong className="text-primary">W:</strong> {item.wish}</h3>
-              <p className="text-gray-300 text-xs mt-2"><strong className="text-green-400">O:</strong> {item.outcome}</p>
-              <p className="text-gray-300 text-xs mt-1"><strong className="text-orange-400">O:</strong> {item.obstacle}</p>
-              <p className="text-gray-300 text-xs mt-1"><strong className="text-blue-400">P:</strong> {item.plan}</p>
+      ) : (
+        <div className="animate-fade-in-up">
+          {/* Mensagem de Feedback */}
+          {feedbackMsg && (
+            <div className="bg-primary/20 border border-primary/40 rounded-2xl p-3 mb-5 text-primary text-xs font-semibold text-center animate-fade-in">
+              {feedbackMsg}
             </div>
-          ))}
+          )}
+
+          {/* Card com o Formulário */}
+          <div className="bg-surface border border-gray-700/50 rounded-3xl p-5 mb-6 shadow-xl space-y-4">
+            {woopId && (
+              <div className="flex items-center justify-between border-b border-gray-700/50 pb-3 mb-1">
+                <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                  WOOP Ativo Hoje
+                </span>
+                <span className="text-[11px] text-gray-500">
+                  (Limite: 1 por dia)
+                </span>
+              </div>
+            )}
+
+            {/* W - Wish */}
+            <div>
+              <label className="text-xs font-bold text-primary uppercase flex items-center gap-1.5 mb-1">
+                <span>🎯</span> Wish (Desejo)
+              </label>
+              <input
+                type="text"
+                value={wish}
+                onChange={(e) => setWish(e.target.value)}
+                placeholder="Qual seu desejo realista mais importante hoje?"
+                className="w-full bg-background border border-gray-600/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors placeholder:text-gray-500"
+              />
+            </div>
+
+            {/* O - Outcome */}
+            <div>
+              <label className="text-xs font-bold text-green-400 uppercase flex items-center gap-1.5 mb-1">
+                <span>✨</span> Outcome (Melhor Resultado)
+              </label>
+              <input
+                type="text"
+                value={outcome}
+                onChange={(e) => setOutcome(e.target.value)}
+                placeholder="Como você vai se sentir ao alcançar isso?"
+                className="w-full bg-background border border-gray-600/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-green-400 transition-colors placeholder:text-gray-500"
+              />
+            </div>
+
+            {/* O - Obstacle */}
+            <div>
+              <label className="text-xs font-bold text-orange-400 uppercase flex items-center gap-1.5 mb-1">
+                <span>🚧</span> Obstacle (Obstáculo Interno)
+              </label>
+              <input
+                type="text"
+                value={obstacle}
+                onChange={(e) => setObstacle(e.target.value)}
+                placeholder="O que dentro de você (procrastinação, cansaço) pode atrapalhar?"
+                className="w-full bg-background border border-gray-600/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-400 transition-colors placeholder:text-gray-500"
+              />
+            </div>
+
+            {/* P - Plan */}
+            <div>
+              <label className="text-xs font-bold text-blue-400 uppercase flex items-center gap-1.5 mb-1">
+                <span>💡</span> Plan (Plano Se... Então...)
+              </label>
+              <input
+                type="text"
+                value={plan}
+                onChange={(e) => setPlan(e.target.value)}
+                placeholder="Se [o obstáculo acontecer], então eu vou [ação rápida]..."
+                className="w-full bg-background border border-gray-600/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-400 transition-colors placeholder:text-gray-500"
+              />
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="pt-2 flex flex-col gap-2.5">
+              <button
+                onClick={handleSalvar}
+                disabled={!wish.trim() || isSubmitting || isDeleting}
+                className="w-full bg-primary hover:bg-[#8ab08f] disabled:opacity-50 text-[#121826] font-bold py-3.5 rounded-xl text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+              >
+                {isSubmitting
+                  ? 'Salvando...'
+                  : woopId
+                  ? 'Salvar Alterações'
+                  : 'Salvar WOOP de Hoje'}
+              </button>
+
+              {woopId && (
+                <button
+                  type="button"
+                  onClick={handleExcluir}
+                  disabled={isSubmitting || isDeleting}
+                  className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-semibold py-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
+                >
+                  {isDeleting ? 'Excluindo...' : '🗑️ Excluir WOOP de Hoje'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Dica do Método WOOP */}
+          <div className="bg-surface/50 border border-gray-700/40 rounded-2xl p-4 text-xs text-gray-400 space-y-2">
+            <h4 className="font-bold text-gray-300 text-xs uppercase tracking-wide">
+              💡 Sobre o Método WOOP
+            </h4>
+            <p className="leading-relaxed">
+              O WOOP é uma estratégia científica para autorregulação: definir um único desejo por dia, visualizar o melhor benefício, antecipar o obstáculo interno e definir uma ação imediata no formato <em>&quot;Se... Então...&quot;</em>.
+            </p>
+          </div>
         </div>
       )}
     </main>

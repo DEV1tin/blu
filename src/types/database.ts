@@ -32,5 +32,8 @@ export interface WoopData {
   obstacle: string;
   plan: string;
   ativo: boolean;
+  dataLogica?: string; // YYYY-MM-DD do dia clínico
   createdAt: string;
+  updatedAt?: string;
 }
+
