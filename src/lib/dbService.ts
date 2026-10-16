@@ -46,6 +46,11 @@ export async function salvarRegistro(registro: Omit<RegistroData, 'dataLogica' |
   const dataLogica = getLogicalDateString();
   const novoRegistro: RegistroData = {
     ...registro,
+    qualidade: registro.qualidade || '',
+    detalhe: registro.detalhe || '',
+    titulo: registro.titulo || '',
+    emoji: registro.emoji || '📝',
+    hora: registro.hora || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
     dataLogica,
     createdAt: new Date().toISOString(),
   };
@@ -60,7 +65,7 @@ export async function salvarRegistro(registro: Omit<RegistroData, 'dataLogica' |
       novoRegistro.id = docRef.id;
       return novoRegistro;
     } catch (err) {
-      console.warn('Falha ao gravar no Firestore, salvando em fallback local:', err);
+      console.error('Falha ao gravar no Firestore:', err);
     }
   }
 

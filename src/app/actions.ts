@@ -32,11 +32,11 @@ export const addRegistro = async (data: any, pacienteId: string = 'usr_victor') 
   return await salvarRegistro({
     pacienteId,
     tipo: data.tipo,
-    titulo: data.titulo,
-    detalhe: data.detalhe,
-    emoji: data.emoji,
-    qualidade: data.qualidade,
-    hora: data.hora
+    titulo: data.titulo || '',
+    detalhe: data.detalhe || '',
+    emoji: data.emoji || '📝',
+    qualidade: data.qualidade || '',
+    hora: data.hora || ''
   });
 };
 
