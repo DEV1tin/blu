@@ -23,7 +23,7 @@ export default function LoginScreen() {
         localStorage.setItem('auth_token', 'simulated_token_123');
         router.push('/');
       } else {
-        setErrorMsg(res.message);
+        setErrorMsg(res.message || 'Falha no login');
         setLoading(false);
       }
     } catch (error) {

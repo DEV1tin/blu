@@ -12,6 +12,8 @@ const nunito = Nunito({
   subsets: ["latin"],
 });
 
+import { AppProviders } from "../components/AppProviders";
+
 export const metadata: Metadata = {
   title: "Blu.",
   description: "Acompanhamento Psiquiátrico Amigável",
@@ -25,7 +27,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="min-h-full flex flex-col items-center">
         <div className="w-full max-w-md bg-surface min-h-screen shadow-[0_0_50px_rgba(0,0,0,0.5)] relative flex flex-col font-inter">
-          {children}
+          <AppProviders>
+            {children}
+          </AppProviders>
         </div>
       </body>
     </html>
