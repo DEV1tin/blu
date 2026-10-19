@@ -87,7 +87,8 @@ export default function RevisaoDoDia() {
             const isOldGeneric =
               revExistente.isFallback ||
               revExistente.mensagemDoBlu?.includes('Muito bom ter você aqui encerrando mais um dia') ||
-              revExistente.mensagemDoBlu?.includes('anotou sua medicação');
+              revExistente.mensagemDoBlu?.includes('anotou sua medicação') ||
+              revExistente.mensagemDoBlu?.includes('fica muito nítido o contraste');
 
             if (!isOldGeneric) {
               setMensagemDoBlu(revExistente.mensagemDoBlu || '');

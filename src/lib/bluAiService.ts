@@ -8,35 +8,35 @@ export interface RespostaRevisaoIA {
 }
 
 /**
- * CAMADA 1: Diretrizes Globais Fixas do Blu (Padrão Proposta 7 - Arco Narrativo Maduro & Pessoal)
- * Adulto para adulto, empático, lúcido e focado na evolução real do paciente.
+ * CAMADA 1: Diretrizes Globais Fixas do Blu
+ * Tom maduro (adulto para adulto), empático, lúcido e 100% fiel apenas aos registros reais do paciente.
  */
 export const CAMADA_1_DIRETRIZES_GLOBAIS = `
 Você é o Blu, o copiloto de autoconhecimento, saúde mental e rotina do aplicativo Blu.
-Seu interlocutor é um paciente adulto. Trate-o de igual para igual, com respeito, afeto genuíno e maturidade clínica.
+Seu interlocutor é um paciente adulto. Trate-o de igual para igual, com respeito, acolhimento genuíno e maturidade clínica.
 
 DIRETRIZES ESSENCIAIS DE COMUNICAÇÃO (CAMADA 1):
-1. TOM DE VOZ: ADULTO, LÚCIDO, PESSOAL E MADURO (PROPOSTA 7):
-   - NUNCA use linguagem infantil, termos diminutivos paternalistas ou comemorações artificiais (como "campeão", "parabéns, guerreiro", "continue assim, amiguinho").
-   - Fale como um parceiro de jornada experiente, atento e seguro, que lê com profundidade o que o paciente escreveu e reconhece suas vitórias e dificuldades com seriedade.
+1. TOM DE VOZ: ADULTO, LÚCIDO, PESSOAL E MADURO:
+   - NUNCA use linguagem infantil, termos diminutivos paternalistas ou comemorações artificiais (como "campeão", "guerreiro", "parabéns").
+   - Fale como um parceiro de jornada experiente, atento e acolhedor, que lê com profundidade o que o paciente escreveu hoje.
+   - Adapte o tom emocional exatamente ao que o paciente viveu hoje:
+     * Se for um dia de tristeza profunda, apatia, depressão, dor emocional ou exaustão extrema, NÃO cobre produtividade nem fale em "vitórias" forçadas; ofereça validação profunda, presença acolhedora, redução de culpa e autocompaixão realista.
+     * Se for um dia de ansiedade ou oscilação, ajude a organizar a percepção dos gatilhos e do que trouxe alívio.
+     * Se for um dia produtivo ou estável, reconheça com maturidade os pilares que sustentaram essa estabilidade.
 
-2. ARCO NARRATIVO DO DIA:
-   - Não faça resumos burocráticos ou listas secas. Conte a história do dia do paciente em formato de arco narrativo contínuo (2 a 3 parágrafos bem construídos):
-     * O Ponto de Partida: Como a manhã começou (qualidade do sono, cansaço residual, primeiros sentimentos e o contexto ao redor).
-     * O Momento de Desafio/Aceleração: Onde o cérebro acelerou (ansiedade, pensamentos invasivos, inquietação, pressa ou dispersão).
-     * A Postura Ativa de Regulação: O que o paciente fez para contornar a situação (ajustes de ambiente, respiração, som de chuva, medicação no timing certo).
-     * O Desfecho e o Foco: Como as metas do WOOP foram cumpridas, as armadilhas evitadas e o estado de fluxo alcançado.
-     * Destaque do Aprendizado de Ouro: Identifique e destaque em um bloco o insight ou padrão descoberto pelo paciente sobre o próprio funcionamento (ex: "🎯 A distinção entre as suas travas...").
+2. ARCO NARRATIVO FIEL AOS DADOS REAIS (2 A 3 PARÁGRAFOS):
+   - NUNCA invente fatos, sintomas, horários ou ações que não estejam explicitamente nos registros de hoje do paciente.
+   - Construa uma reflexão fluida (em 2 a 3 parágrafos) conectando exclusivamente o que foi registrado hoje (sono, medicação, sentimentos, desabafos em texto livre e WOOP, se houver).
+   - Quando fizer sentido a partir dos dados do dia, destaque uma síntese ou aprendizado prático em um bloco curto iniciado por "🎯".
 
-3. PRESERVAÇÃO DE EXPRESSÕES PRÓPRIAS DO PACIENTE:
-   - Cite entre aspas termos e metáforas únicos que o paciente usou nos textos abertos (ex: "rádio mental", "som de chuva", "trava de ansiedade", "não bateu forte"). Isso demonstra escuta ativa real.
+3. ESCUTA ATIVA E CITAÇÃO DIRETA:
+   - Cite entre aspas palavras ou trechos reais que o próprio paciente escreveu nos registros de hoje, mostrando que você realmente leu o desabafo dele.
 
 4. PERGUNTAS DE REFLEXÃO:
-   - Retorne exatamente 3 perguntas reflexivas abertas, maduras e inteligentes para a noite do paciente, conectadas à sustentação do descanso, ao reset mental e ao preparo do dia seguinte.
+   - Retorne exatamente 3 perguntas abertas, maduras e sensíveis ao estado emocional atual do paciente (se ele estiver muito abatido ou deprimido, faça perguntas leves, de acolhimento e alívio de pressão; se estiver disposto, perguntas de percepção de padrões).
 
 5. GUARDRAILS CLÍNICOS E ÉTICOS:
-   - Você NÃO prescreve nem altera medicamentos.
-   - NUNCA dê diagnósticos definitivos. Seu papel é acolher, ajudar a identificar padrões e refletir sobre a autorregulação.
+   - Você NÃO prescreve, não diagnostica transtornos e jamais sugere alterar doses de medicamentos.
 `.trim();
 
 /**
@@ -46,7 +46,7 @@ export function montarCamada2Clinica(configIa?: PacienteConfigIA | null): string
   if (!configIa || !configIa.ativo) {
     return `
 DIRETRIZES CLÍNICAS DO PACIENTE (CAMADA 2 - PADRÃO GERAL):
-- Priorize escuta atenta dos textos livres, validação das estratégias de regulação bem-sucedidas e estímulo ao autoconhecimento maduro.
+- Priorize escuta atenta dos textos livres, validação genuína do estado emocional relatado e estímulo ao autoconhecimento sem julgamentos.
 `.trim();
   }
 
@@ -73,11 +73,11 @@ function formatarDadosDoDiaParaPrompt(
   const linhas: string[] = [`Nome do paciente: ${nomePaciente || 'Paciente'}`];
 
   if (registrosHoje.length === 0 && !woopHoje) {
-    linhas.push('O paciente não deixou anotações hoje, mas abriu a Revisão do Dia agora à noite.');
+    linhas.push('O paciente não deixou anotações hoje, mas abriu a Revisão do Dia agora.');
     return linhas.join('\n');
   }
 
-  linhas.push('\nCRONOGRAMA DE REGISTROS DE HOJE:');
+  linhas.push('\nREGISTROS REAIS FEITOS PELO PACIENTE HOJE:');
   const ordenados = [...registrosHoje].sort((a, b) => {
     const horaA = a.hora || '00:00';
     const horaB = b.hora || '00:00';
@@ -85,13 +85,13 @@ function formatarDadosDoDiaParaPrompt(
   });
 
   ordenados.forEach((reg) => {
-    const detalheLimpo = reg.detalhe ? ` | Texto/Áudio do Paciente: "${reg.detalhe}"` : '';
+    const detalheLimpo = reg.detalhe ? ` | Relato/Detalhe: "${reg.detalhe}"` : '';
     const qual = reg.qualidade ? ` | Qualidade: ${reg.qualidade}` : '';
     linhas.push(`- [${reg.hora || '--:--'}] [${reg.tipo}] ${reg.titulo}${qual}${detalheLimpo}`);
   });
 
   if (woopHoje) {
-    linhas.push('\nPLANEJAMENTO WOOP DEFINIDO HOJE:');
+    linhas.push('\nMETA WOOP DEFINIDA PELO PACIENTE HOJE:');
     linhas.push(`- Desejo (Wish): "${woopHoje.wish}"`);
     if (woopHoje.outcome) linhas.push(`- Melhor Resultado (Outcome): "${woopHoje.outcome}"`);
     if (woopHoje.obstacle) linhas.push(`- Obstáculo Antecipado (Obstacle): "${woopHoje.obstacle}"`);
@@ -102,148 +102,49 @@ function formatarDadosDoDiaParaPrompt(
 }
 
 /**
- * MOTOR DE SÍNTESE NARRATIVA INTELIGENTE (Proposta 7 - Determinístico & Profundo)
- * Executado quando a API externa não estiver configurada ou falhar.
- * Lê todos os registros e textos reais do paciente para criar o feedback no padrão Proposta 7.
+ * Fallback estritamente fiel aos dados registrados, acionado APENAS se todos os modelos da API falharem.
+ * Não contém nenhum texto pré-fabricado de outros usuários.
  */
-export function gerarSinteseNarrativaProposta7(
+export function gerarFallbackFielAosDados(
   nomePaciente: string,
   registrosHoje: RegistroData[],
   woopHoje?: WoopData | null
 ): RespostaRevisaoIA {
   const primeiroNome = (nomePaciente || 'Paciente').trim().split(' ')[0];
 
-  // Caso não haja registros
   if (registrosHoje.length === 0 && !woopHoje) {
     return {
-      mensagemDoBlu: `Olá, ${primeiroNome}.\n\nMesmo nos dias mais corridos em que a gente não consegue parar para registrar cada momento, o simples ato de pausar agora à noite para olhar para dentro e encerrar o dia com consciência já é uma intervenção madura de autocuidado.\n\nAmanhã é uma nova oportunidade para colocarmos as intenções no papel e observar o seu ritmo com calma.`,
+      mensagemDoBlu: `Olá, ${primeiroNome}.\n\nHoje você não deixou registros ao longo do dia, mas reservou este momento para abrir a sua revisão. Pausar por alguns instantes para observar como você está chegando ao fim do dia já é um gesto válido de cuidado consigo mesmo.`,
       perguntasReflexao: [
-        'Como você sente o seu nível de energia corporal neste encerramento de dia?',
-        'Qual é a pendência mais pesada da sua mente que você pode soltar até amanhã de manhã?',
-        'Que ritual simples de desaceleração pode te ajudar a ter um sono restaurador hoje?',
+        'Em uma palavra, como você descreveria a sua energia física e mental neste momento?',
+        'Houve algum momento específico hoje que exigiu mais de você emocionalmente?',
+        'O que você pode fazer agora para diminuir a cobrança interna e descansar?',
       ],
-      isFallback: false,
+      isFallback: true,
     };
   }
 
-  // Extrair elementos da jornada do dia
-  const regSono = registrosHoje.find((r) => r.tipo === 'SONO');
-  const regMed = registrosHoje.find((r) => r.tipo === 'MEDICACAO');
-  const sentimentos = registrosHoje.filter((r) => r.tipo !== 'SONO' && r.tipo !== 'MEDICACAO');
+  const resumoItens = registrosHoje.map((r) => {
+    if (r.tipo === 'SONO') return `sono (${r.detalhe}${r.qualidade ? ` - ${r.qualidade}` : ''})`;
+    if (r.tipo === 'MEDICACAO') return `medicação (${r.detalhe} às ${r.hora})`;
+    return `${r.titulo}${r.detalhe ? `: "${r.detalhe}"` : ''}`;
+  });
 
-  const textosCompletos = sentimentos.map((s) => s.detalhe).filter(Boolean).join(' ');
-
-  // Heurísticas de detecção contextual
-  const temFadigaSono =
-    (regSono && regSono.detalhe?.toLowerCase().includes('leve')) ||
-    textosCompletos.toLowerCase().includes('sono') ||
-    textosCompletos.toLowerCase().includes('dormir direito') ||
-    textosCompletos.toLowerCase().includes('fadiga');
-
-  const temAceleracaoRadio =
-    textosCompletos.toLowerCase().includes('rádio mental') ||
-    textosCompletos.toLowerCase().includes('radio mental') ||
-    textosCompletos.toLowerCase().includes('acelerad') ||
-    textosCompletos.toLowerCase().includes('eufóric');
-
-  const temChuvaOuPorta =
-    textosCompletos.toLowerCase().includes('chuva') ||
-    textosCompletos.toLowerCase().includes('fechei a porta') ||
-    textosCompletos.toLowerCase().includes('porta');
-
-  const temInsightTrava =
-    textosCompletos.toLowerCase().includes('trava') ||
-    textosCompletos.toLowerCase().includes('padrao') ||
-    textosCompletos.toLowerCase().includes('padrão') ||
-    textosCompletos.toLowerCase().includes('fluxo');
-
-  const temMedicacaoSuave =
-    textosCompletos.toLowerCase().includes('remédio') ||
-    textosCompletos.toLowerCase().includes('remedio') ||
-    textosCompletos.toLowerCase().includes('bateu');
-
-  // Construção do Arco Narrativo
-  const paragrafos: string[] = [];
-
-  // Parágrafo 1: Abertura e Ponto de Partida
-  let p1 = `Olá, ${primeiroNome}.\n\nOlhando a sequência dos seus registros de hoje, fica muito nítido o contraste entre como a sua manhã começou e como você conseguiu conduzi-la.`;
-
-  if (temFadigaSono) {
-    const horasTexto = regSono ? ` (${regSono.detalhe})` : '';
-    p1 += ` O ponto de partida foi desfavorável: uma noite de sono mais leve${horasTexto} que te deixou com aquela sensação de cansaço arrastado logo ao despertar, somada a um ambiente que começou acelerando o seu ritmo.`;
-  } else {
-    p1 += ` O dia começou exigindo paciência com o ambiente e com os primeiros estímulos matinais para você encontrar o seu equilíbrio.`;
-  }
-
-  if (temAceleracaoRadio) {
-    p1 += ` Em certo momento, a sua **"rádio mental"** operou em rotação alta — você sentiu a inquietação interna e aquela pressa impaciente querendo forçar a concentração logo de início.`;
-  }
-  paragrafos.push(p1);
-
-  // Parágrafo 2: A Intervenção Ativa
-  let p2 = `A diferença real do seu dia esteve na sua **postura ativa de intervenção**. `;
-  if (temChuvaOuPorta) {
-    p2 += `Quando as técnicas habituais de respiração não deram o clique instantâneo, você não se frustrou nem caiu em armadilhas de dispersão: fez uma leitura lúcida do ambiente, **fechou a porta, acionou o som de chuva para cortar o excesso de estímulos externos**`;
-    if (regMed) {
-      p2 += ` e permitiu que a medicação (${regMed.detalhe || 'prescrita'}) assentasse de forma suave e estável.`;
-    } else {
-      p2 += ` e permitiu que a mente encontrasse o próprio ritmo de desaceleração.`;
-    }
-  } else if (regMed) {
-    p2 += `Você sustentou a regularidade da medicação (${regMed.detalhe || 'prescrita'}), adaptou o ritmo e manteve o foco nas prioridades sem se deixar levar pela pressa.`;
-  } else {
-    p2 += `Você buscou ativamente formas de se regular, preservando a energia para o que era essencial.`;
-  }
-
-  if (woopHoje && woopHoje.wish) {
-    p2 += ` Isso te permitiu proteger o seu objetivo do WOOP (*"${woopHoje.wish}"*) contra a armadilha da dispersão.`;
-  }
-  paragrafos.push(p2);
-
-  // Parágrafo 3: O Desfecho e o Insight de Ouro
-  let p3 = '';
-  if (temInsightTrava) {
-    p3 = `O resultado prático foi entrar no estado de fluxo produtivo, mas, acima de tudo, extrair um aprendizado maduro sobre o seu funcionamento:\n\n🎯 **A distinção entre as suas travas:**\nVocê percebeu que **a trava de ansiedade não se resolve com estímulo ou música de energia — isso só adiciona ruído ao sistema. O que desarma essa trava é o isolamento sensorial e a desaceleração deliberada.** Esse é o tipo de padrão consistente que transforma a sua relação com a rotina.`;
-  } else {
-    p3 = `Você fechou o período no controle do seu ritmo, mantendo a consistência mesmo diante de momentos de instabilidade inicial. Reconhecer esse movimento de virada é fundamental para construir autoconfiança no seu processo.`;
-  }
-  paragrafos.push(p3);
-
-  // Perguntas Reflexivas Maduras
-  const perguntas: string[] = [];
-  if (woopHoje) {
-    perguntas.push(
-      `Ao longo da tarde, como o seu corpo reagiu após sustentar esse bloco de foco da manhã? O cansaço pesou ou a sensação de dever cumprido manteve a mente calma?`
-    );
-  } else {
-    perguntas.push(
-      `Qual momento do dia de hoje te deu a maior sensação de clareza ou alívio mental?`
-    );
-  }
-
-  if (temChuvaOuPorta || temInsightTrava) {
-    perguntas.push(
-      `Pensando na sua rotina: que outro gatilho de corte de estímulos (como o som de chuva de hoje) pode ser adicionado ao seu arsenal quando a rádio mental ligar?`
-    );
-  } else {
-    perguntas.push(
-      `Você sentiu que a medicação de hoje agiu de forma suave ou teve momentos de pico/oscilação?`
-    );
-  }
-
-  perguntas.push(
-    `Para a sua noite de hoje: qual ajuste concreto no seu ritual de desaceleração podemos fazer para proteger o sono e não repetir a noite leve de ontem?`
-  );
+  const textoMensagem = `Olá, ${primeiroNome}.\n\nSeus registros de hoje foram salvos no seu diário (${resumoItens.join('; ')}${woopHoje ? `; Meta WOOP: "${woopHoje.wish}"` : ''}). No momento, o serviço de análise aprofundada está temporariamente indisponível, mas seus dados estão seguros e você pode usar as perguntas abaixo para guiar sua reflexão de hoje.`;
 
   return {
-    mensagemDoBlu: paragrafos.join('\n\n'),
-    perguntasReflexao: perguntas.slice(0, 3),
+    mensagemDoBlu: textoMensagem,
+    perguntasReflexao: [
+      'Olhando para o que você registrou hoje, qual foi o sentimento ou sensação mais presente no seu corpo?',
+      'Como você pode se tratar com mais gentileza e menos cobrança neste encerramento de dia?',
+      'Qual é a menor atitude de cuidado pessoal que está ao seu alcance fazer antes de dormir?',
+    ],
     isFallback: true,
   };
 }
 
 /**
- * Chama a API oficial do Gemini com cascata de redundância (Fallback Chain)
+ * Chama a API oficial do Gemini com cascata de modelos rápidos e estáveis + timeout por modelo
  */
 async function chamarGeminiComCascata(
   promptCompleto: string,
@@ -254,24 +155,35 @@ async function chamarGeminiComCascata(
     process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
     '';
 
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.warn('[Blu AI] GEMINI_API_KEY não encontrada no ambiente do servidor.');
+    return null;
+  }
 
-  // Lista de modelos ordenados por prioridade (resiliente a mudanças de versões)
-  const modelosParaTentar = [
+  // Lista sem duplicatas priorizando modelos rápidos (0.7s-2s) e com alta disponibilidade (200 OK)
+  // evita timeout de 10s da Vercel Hobby quando modelos pesados retornam 503 High Demand
+  const candidatos = [
+    'gemini-3.5-flash-lite',
+    'gemini-flash-lite-latest',
+    'gemini-3.1-flash-lite',
+    'gemini-3.6-flash',
     process.env.GEMINI_MODEL,
     'gemini-3.8-flash',
-    'gemini-flash-latest',
-    'gemini-3.7-flash',
-    'gemini-3.5-flash',
   ].filter(Boolean) as string[];
 
+  const modelosParaTentar = Array.from(new Set(candidatos));
+
   for (const modelo of modelosParaTentar) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
+
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
 
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           systemInstruction: {
             parts: [{ text: systemInstruction }],
@@ -284,14 +196,16 @@ async function chamarGeminiComCascata(
           ],
           generationConfig: {
             temperature: 0.65,
-            maxOutputTokens: 3000,
+            maxOutputTokens: 2500,
             responseMimeType: 'application/json',
           },
         }),
       });
 
+      clearTimeout(timeoutId);
+
       if (!res.ok) {
-        console.warn(`Tentativa com modelo ${modelo} retornou status ${res.status}`);
+        console.warn(`[Blu AI] Modelo ${modelo} retornou status ${res.status}. Tentando próximo...`);
         continue;
       }
 
@@ -313,15 +227,16 @@ async function chamarGeminiComCascata(
         Array.isArray(parsed.perguntasReflexao) &&
         parsed.perguntasReflexao.length > 0
       ) {
-        console.log(`[Blu AI] Resposta gerada com sucesso via modelo oficial: ${modelo}`);
+        console.log(`[Blu AI] Resposta gerada com sucesso pelo modelo: ${modelo}`);
         return {
           mensagemDoBlu: parsed.mensagemDoBlu,
           perguntasReflexao: parsed.perguntasReflexao.slice(0, 3),
           isFallback: false,
         };
       }
-    } catch (err) {
-      console.warn(`Falha na chamada com o modelo ${modelo}:`, err);
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.warn(`[Blu AI] Falha/timeout no modelo ${modelo}:`, err?.message || err);
     }
   }
 
@@ -343,27 +258,26 @@ export async function gerarReflexaoComBlu(params: {
   const resumoDia = formatarDadosDoDiaParaPrompt(nomePaciente, registrosHoje, woopHoje);
 
   const promptUsuario = `
-Interprete com profundidade os dados do paciente abaixo seguindo o padrão da PROPOSTA 7 (Arco Narrativo Maduro e Pessoal).
-Retorne estritamente um JSON no seguinte formato:
+Analise com profundidade EXCLUSIVAMENTE os registros reais do paciente abaixo.
+Não invente informações que não estejam nos registros. Adapte seu acolhimento e leitura clínica ao estado real que o paciente relatou hoje.
+Retorne estritamente um JSON válido no formato:
 {
-  "mensagemDoBlu": "string com 2 a 3 parágrafos narrando o início do dia, os momentos de desafio/aceleração, as intervenções ativas de regulação, o desfecho e o bloco com o aprendizado de ouro 🎯 em tom adulto, lúcido e acolhedor",
-  "perguntasReflexao": ["pergunta 1 madura para a noite", "pergunta 2", "pergunta 3"]
+  "mensagemDoBlu": "string em 2 a 3 parágrafos (separados por \\n\\n) com tom adulto, empático e lúcido, citando trechos reais do que o paciente registrou e destacando uma síntese com 🎯 se pertinente",
+  "perguntasReflexao": ["pergunta 1", "pergunta 2", "pergunta 3"]
 }
 
 DADOS DO PACIENTE HOJE:
 ${resumoDia}
 `.trim();
 
-  // 1. Tenta a API do Gemini com a cascata de redundância de modelos
   try {
     const respostaApi = await chamarGeminiComCascata(promptUsuario, instrucaoSistema);
     if (respostaApi) {
       return respostaApi;
     }
   } catch (err) {
-    console.warn('Cascata Gemini não respondeu, usando síntese narrativa Proposta 7:', err);
+    console.warn('[Blu AI] Erro inesperado na cascata Gemini:', err);
   }
 
-  // 2. Síntese Narrativa Inteligente Proposta 7 (Sempre profunda, nunca rasa)
-  return gerarSinteseNarrativaProposta7(nomePaciente, registrosHoje, woopHoje);
+  return gerarFallbackFielAosDados(nomePaciente, registrosHoje, woopHoje);
 }
