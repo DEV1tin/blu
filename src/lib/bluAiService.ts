@@ -238,7 +238,7 @@ export function gerarSinteseNarrativaProposta7(
   return {
     mensagemDoBlu: paragrafos.join('\n\n'),
     perguntasReflexao: perguntas.slice(0, 3),
-    isFallback: false,
+    isFallback: true,
   };
 }
 
@@ -259,10 +259,10 @@ async function chamarGeminiComCascata(
   // Lista de modelos ordenados por prioridade (resiliente a mudanças de versões)
   const modelosParaTentar = [
     process.env.GEMINI_MODEL,
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
+    'gemini-3.8-flash',
+    'gemini-flash-latest',
+    'gemini-3.7-flash',
+    'gemini-3.5-flash',
   ].filter(Boolean) as string[];
 
   for (const modelo of modelosParaTentar) {
@@ -284,7 +284,7 @@ async function chamarGeminiComCascata(
           ],
           generationConfig: {
             temperature: 0.65,
-            maxOutputTokens: 1200,
+            maxOutputTokens: 3000,
             responseMimeType: 'application/json',
           },
         }),
@@ -299,13 +299,21 @@ async function chamarGeminiComCascata(
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!rawText) continue;
 
-      const parsed = JSON.parse(rawText);
+      let textClean = rawText.trim();
+      if (textClean.startsWith('```json')) {
+        textClean = textClean.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (textClean.startsWith('```')) {
+        textClean = textClean.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+
+      const parsed = JSON.parse(textClean);
       if (
         parsed &&
         typeof parsed.mensagemDoBlu === 'string' &&
         Array.isArray(parsed.perguntasReflexao) &&
         parsed.perguntasReflexao.length > 0
       ) {
+        console.log(`[Blu AI] Resposta gerada com sucesso via modelo oficial: ${modelo}`);
         return {
           mensagemDoBlu: parsed.mensagemDoBlu,
           perguntasReflexao: parsed.perguntasReflexao.slice(0, 3),
