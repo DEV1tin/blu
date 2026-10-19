@@ -754,7 +754,7 @@ export default function Home() {
 
       case 'woop':
         return (
-          <section className="mb-6">
+          <section id="tour-ferramentas" className="mb-6">
             <div className="flex items-center justify-between mb-2 ml-1">
               <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                 Minhas Ferramentas

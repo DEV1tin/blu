@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { salvarWoop, getWoopDeHoje, excluirWoop } from '../actions';
 import { useAuth } from '../../context/AuthContext';
 import { WoopData } from '../../types/database';
+import { WOOPHelpModal } from '../../components/WOOPHelpModal';
+import { triggerHaptic } from '../../lib/haptics';
 
 export default function WOOPPage() {
   const router = useRouter();
@@ -20,8 +22,19 @@ export default function WOOPPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const [ajudaAberta, setAjudaAberta] = useState(false);
 
   const uid = user?.uid || 'usr_victor';
+
+  // Gatilho do Onboarding explicativo na primeira vez que abre o WOOP
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const jaViu = localStorage.getItem('blu_woop_onboarding_completed') === 'true';
+      if (!jaViu) {
+        setAjudaAberta(true);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -107,24 +120,38 @@ export default function WOOPPage() {
 
   return (
     <main className="flex-1 flex flex-col p-6 bg-background min-h-screen overflow-y-auto pb-12">
-      {/* Header */}
-      <header className="flex items-center gap-4 mb-6">
-        <button
-          onClick={() => router.push('/')}
-          className="w-10 h-10 bg-surface border border-gray-700/50 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">
-            {woopId ? 'Editar WOOP do Dia' : 'WOOP do Dia'}
-          </h1>
-          <p className="text-xs text-gray-400">
-            {woopId ? 'Atualize ou gerencie o seu foco de hoje' : 'Um único foco intencional para hoje'}
-          </p>
+      {/* Header com botão de ajuda (?) */}
+      <header className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3.5">
+          <button
+            onClick={() => router.push('/')}
+            className="w-10 h-10 bg-surface border border-gray-700/50 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors flex-shrink-0"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">
+              {woopId ? 'Editar WOOP do Dia' : 'WOOP do Dia'}
+            </h1>
+            <p className="text-xs text-gray-400">
+              {woopId ? 'Atualize ou gerencie o seu foco de hoje' : 'Um único foco intencional para hoje'}
+            </p>
+          </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('light');
+            setAjudaAberta(true);
+          }}
+          className="w-9 h-9 bg-surface/90 hover:bg-white/[0.08] active:scale-95 border border-white/10 hover:border-primary/40 rounded-full flex items-center justify-center text-primary font-bold text-sm transition-all shadow-md flex-shrink-0"
+          title="Como funciona a metodologia WOOP?"
+        >
+          ?
+        </button>
       </header>
 
       {isLoading ? (
@@ -248,6 +275,12 @@ export default function WOOPPage() {
           </div>
         </div>
       )}
+
+      {/* Modal de Ajuda / Onboarding da Metodologia WOOP */}
+      <WOOPHelpModal
+        isOpen={ajudaAberta}
+        onClose={() => setAjudaAberta(false)}
+      />
     </main>
   );
 }

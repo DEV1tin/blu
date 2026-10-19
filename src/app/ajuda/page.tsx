@@ -31,6 +31,25 @@ export default function Ajuda() {
           </div>
         </button>
 
+        {/* Entender WOOP */}
+        <button 
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('blu_woop_onboarding_completed');
+            }
+            router.push('/woop');
+          }}
+          className="w-full bg-surface border border-gray-700/50 hover:bg-surface/70 hover:border-amber-500/40 rounded-3xl p-5 flex items-center gap-4 transition-all text-left group"
+        >
+          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full flex items-center justify-center text-2xl group-hover:scale-110 transition-transform flex-shrink-0">
+            🎯
+          </div>
+          <div>
+            <h2 className="font-bold text-white text-sm">Metodologia WOOP</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Aprenda como funciona a ciência por trás do foco diário</p>
+          </div>
+        </button>
+
         <button className="w-full bg-surface border border-gray-700/50 hover:bg-surface/70 hover:border-gray-600/50 rounded-3xl p-5 flex items-center gap-4 transition-all text-left group">
           <div className="w-12 h-12 bg-green-500/10 border border-green-500/20 text-green-400 rounded-full flex items-center justify-center text-2xl group-hover:scale-110 transition-transform flex-shrink-0">
             💬
