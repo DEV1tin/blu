@@ -16,7 +16,7 @@ import {
   buscarPerfilUsuario,
   atualizarPerfilUsuario
 } from '../lib/dbService';
-import { gerarReflexaoComBlu } from '../lib/bluAiService';
+import { gerarReflexaoComBluServerAction } from './aiServerAction';
 import { RegistroData, WoopData } from '../types/database';
 
 export const getConfigMedico = async () => {
@@ -140,11 +140,44 @@ export const gerarReflexaoBluAction = async (params: {
   woopHoje?: WoopData | null;
 }) => {
   const perfil = await buscarPerfilUsuario(params.uid);
-  return await gerarReflexaoComBlu({
+
+  // Garantir objetos planos 100% serializáveis para a Server Action (remove instâncias Timestamp do Firestore)
+  const registrosPlanos: RegistroData[] = (params.registrosHoje || []).map((r) => ({
+    id: r.id,
+    pacienteId: r.pacienteId,
+    tipo: r.tipo,
+    titulo: r.titulo || '',
+    detalhe: r.detalhe || '',
+    qualidade: r.qualidade || '',
+    hora: r.hora || '',
+    emoji: r.emoji || '',
+    dataLogica: r.dataLogica || '',
+    createdAt: r.createdAt || '',
+  }));
+
+  const woopPlano: WoopData | null = params.woopHoje
+    ? {
+        id: params.woopHoje.id,
+        pacienteId: params.woopHoje.pacienteId,
+        wish: params.woopHoje.wish || '',
+        outcome: params.woopHoje.outcome || '',
+        obstacle: params.woopHoje.obstacle || '',
+        plan: params.woopHoje.plan || '',
+        ativo: Boolean(params.woopHoje.ativo),
+        dataLogica: params.woopHoje.dataLogica || '',
+        createdAt: params.woopHoje.createdAt || '',
+      }
+    : null;
+
+  const configIaPlana = perfil?.configIa
+    ? JSON.parse(JSON.stringify(perfil.configIa))
+    : null;
+
+  return await gerarReflexaoComBluServerAction({
     nomePaciente: params.nomePaciente || perfil?.nome || 'Paciente',
-    registrosHoje: params.registrosHoje,
-    woopHoje: params.woopHoje,
-    configIa: perfil?.configIa || null,
+    registrosHoje: registrosPlanos,
+    woopHoje: woopPlano,
+    configIa: configIaPlana,
   });
 };
 
