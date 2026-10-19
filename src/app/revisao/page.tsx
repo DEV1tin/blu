@@ -18,6 +18,28 @@ import { triggerHaptic } from '../../lib/haptics';
 
 type Phase = 'loading_init' | 'timeline' | 'loading_ai' | 'ai_feedback' | 'done';
 
+function renderFormattedMessage(text: string) {
+  if (!text) return null;
+  const paragraphs = text.split('\n\n');
+  return paragraphs.map((p, i) => {
+    const parts = p.split(/(\*\*.*?\*\*)/g);
+    return (
+      <p key={i} className="mb-3.5 leading-relaxed text-indigo-100/90 text-sm">
+        {parts.map((part, j) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return (
+              <strong key={j} className="text-white font-bold">
+                {part.slice(2, -2)}
+              </strong>
+            );
+          }
+          return part;
+        })}
+      </p>
+    );
+  });
+}
+
 export default function RevisaoDoDia() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -60,10 +82,18 @@ export default function RevisaoDoDia() {
 
           if (revExistente) {
             setRevisaoId(revExistente.id);
-            setMensagemDoBlu(revExistente.mensagemDoBlu || '');
-            setPerguntasReflexao(revExistente.perguntasReflexao || []);
             setReflexao(revExistente.respostaReflexao || '');
-            setIsFallback(Boolean(revExistente.isFallback));
+
+            const isOldGeneric =
+              revExistente.isFallback ||
+              revExistente.mensagemDoBlu?.includes('Muito bom ter você aqui encerrando mais um dia') ||
+              revExistente.mensagemDoBlu?.includes('anotou sua medicação');
+
+            if (!isOldGeneric) {
+              setMensagemDoBlu(revExistente.mensagemDoBlu || '');
+              setPerguntasReflexao(revExistente.perguntasReflexao || []);
+              setIsFallback(false);
+            }
           }
         })
         .catch(console.error)
@@ -286,21 +316,21 @@ export default function RevisaoDoDia() {
             )}
 
             {/* Mensagem do Blu */}
-            <div className="bg-indigo-900/20 border border-primary/30 rounded-3xl p-5 relative mt-2">
-              <div className="absolute -top-6 -left-2 w-12 h-12 rounded-full border-4 border-background overflow-hidden shadow-lg">
-                <img src="/mascote.jpg" alt="Blu" className="w-full h-full object-cover" />
+            <div className="bg-indigo-900/20 border border-primary/30 rounded-3xl p-5 relative mt-4 shadow-xl">
+              <div className="absolute -top-5 -left-2 w-12 h-12 rounded-full border-2 border-primary/40 overflow-hidden shadow-lg bg-[#16181D] flex items-center justify-center">
+                <img src="/mascote/mascote-sem-fundo.png" alt="Blu" className="w-10 h-10 object-contain drop-shadow" />
               </div>
-              <div className="pl-8 pt-1">
-                <div className="text-sm text-indigo-100 leading-relaxed mb-5 whitespace-pre-line">
-                  {mensagemDoBlu}
+              <div className="pl-6 pt-1">
+                <div className="mb-4">
+                  {renderFormattedMessage(mensagemDoBlu)}
                 </div>
 
                 {/* Perguntas de Reflexão */}
-                <div className="bg-surface/60 rounded-2xl p-4 border border-primary/20">
-                  <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-2.5">
-                    Perguntas do Blu para refletir:
+                <div className="bg-surface/70 rounded-2xl p-4 border border-primary/20 shadow-inner">
+                  <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                    <span>💡</span> Perguntas do Blu para refletir:
                   </h3>
-                  <ul className="text-sm text-gray-200 space-y-2.5 list-disc pl-4 marker:text-primary">
+                  <ul className="text-xs text-gray-200 space-y-2.5 list-disc pl-4 marker:text-primary">
                     {perguntasReflexao.map((pergunta, idx) => (
                       <li key={idx} className="leading-relaxed">
                         {pergunta}
@@ -309,6 +339,20 @@ export default function RevisaoDoDia() {
                   </ul>
                 </div>
               </div>
+            </div>
+
+            {/* Botão de Atualizar / Recalcular Reflexão */}
+            <div className="flex justify-end -mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  handleIniciarReflexaoIA();
+                }}
+                className="text-xs text-gray-400 hover:text-primary transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-white/[0.04] active:scale-95"
+              >
+                <span>🔄</span> Atualizar reflexão com novos registros
+              </button>
             </div>
 
             {/* Input de Reflexão */}
