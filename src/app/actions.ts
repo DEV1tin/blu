@@ -1,5 +1,7 @@
 import { 
   salvarRegistro, 
+  atualizarRegistro,
+  excluirRegistro as dbExcluirRegistro,
   buscarRegistros, 
   buscarRegistrosDeHoje, 
   salvarWoop as dbSalvarWoop, 
@@ -47,6 +49,20 @@ export const addRegistro = async (data: any, pacienteId: string = 'usr_victor') 
     qualidade: data.qualidade || '',
     hora: data.hora || ''
   });
+};
+
+export const updateRegistro = async (id: string, data: any) => {
+  return await atualizarRegistro(id, {
+    titulo: data.titulo,
+    detalhe: data.detalhe,
+    emoji: data.emoji,
+    qualidade: data.qualidade,
+    hora: data.hora,
+  });
+};
+
+export const deleteRegistro = async (id: string) => {
+  return await dbExcluirRegistro(id);
 };
 
 export const getRegistros = async (pacienteId: string = 'usr_victor') => {

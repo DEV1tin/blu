@@ -10,7 +10,8 @@ export default function LoginScreen() {
 
   const [modoCadastro, setModoCadastro] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [nome, setNome] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [secondName, setSecondName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -22,12 +23,15 @@ export default function LoginScreen() {
     
     try {
       if (modoCadastro) {
-        if (!nome.trim()) {
-          setErrorMsg('Por favor, informe seu nome.');
+        if (!firstName.trim()) {
+          setErrorMsg('Por favor, informe seu primeiro nome.');
           setLoading(false);
           return;
         }
-        const res = await register(email, password, nome);
+        const nomeCompleto = secondName.trim()
+          ? `${firstName.trim()} ${secondName.trim()}`
+          : firstName.trim();
+        const res = await register(email, password, nomeCompleto);
         if (res.success) {
           router.push('/');
         } else {
@@ -99,16 +103,30 @@ export default function LoginScreen() {
           <form onSubmit={handleSubmit} className="space-y-4">
             
             {modoCadastro && (
-              <div className="space-y-1.5 animate-fade-in">
-                <label className="text-xs font-nunito font-bold text-gray-400 uppercase tracking-wider ml-1">Seu Nome</label>
-                <div className="relative">
+              <div className="grid grid-cols-2 gap-3 animate-fade-in">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-nunito font-bold text-gray-400 uppercase tracking-wider ml-1">
+                    Primeiro Nome
+                  </label>
                   <input 
                     type="text" 
                     required={modoCadastro}
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    placeholder="Como prefere ser chamado?"
-                    className="w-full bg-background/50 border border-gray-700/50 rounded-2xl px-5 py-3.5 text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all shadow-inner font-inter text-sm"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Ex: João"
+                    className="w-full bg-background/50 border border-gray-700/50 rounded-2xl px-4 py-3.5 text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all shadow-inner font-inter text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-nunito font-bold text-gray-400 uppercase tracking-wider ml-1">
+                    Sobrenome
+                  </label>
+                  <input 
+                    type="text" 
+                    value={secondName}
+                    onChange={(e) => setSecondName(e.target.value)}
+                    placeholder="Ex: Silva"
+                    className="w-full bg-background/50 border border-gray-700/50 rounded-2xl px-4 py-3.5 text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all shadow-inner font-inter text-sm"
                   />
                 </div>
               </div>

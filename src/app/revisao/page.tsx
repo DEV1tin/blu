@@ -13,13 +13,15 @@ import {
 import { getLogicalDateString } from '../../lib/dateUtils';
 import { RegistroData, WoopData } from '../../types/database';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
+import { VoiceListeningModal } from '../../components/VoiceListeningModal';
+import { triggerHaptic } from '../../lib/haptics';
 
 type Phase = 'loading_init' | 'timeline' | 'loading_ai' | 'ai_feedback' | 'done';
 
 export default function RevisaoDoDia() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { isListening, toggleListening, stopListening } = useSpeechRecognition();
+  const { isListening, startListening, stopListening, syncManualText } = useSpeechRecognition();
 
   const [phase, setPhase] = useState<Phase>('loading_init');
   const [registrosHoje, setRegistrosHoje] = useState<RegistroData[]>([]);
@@ -32,6 +34,8 @@ export default function RevisaoDoDia() {
   const [isFallback, setIsFallback] = useState<boolean>(false);
   const [avisoFallback, setAvisoFallback] = useState<string>('');
   const [reflexao, setReflexao] = useState<string>('');
+  const [reflexaoAntesModal, setReflexaoAntesModal] = useState<string>('');
+  const [voiceModalOpen, setVoiceModalOpen] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   useEffect(() => {
@@ -111,10 +115,13 @@ export default function RevisaoDoDia() {
     }
   };
 
-  const handleEnviarReflexao = async () => {
+  const handleEnviarReflexao = async (textoOverride?: string) => {
     stopListening();
+    setVoiceModalOpen(false);
     setIsSaving(true);
-    if (user?.uid) {
+    const textoFinal = typeof textoOverride === 'string' ? textoOverride.trim() : reflexao.trim();
+
+    if (user?.uid && textoFinal) {
       try {
         await salvarRevisao({
           id: revisaoId,
@@ -122,7 +129,7 @@ export default function RevisaoDoDia() {
           dataLogica: getLogicalDateString(),
           mensagemDoBlu,
           perguntasReflexao,
-          respostaReflexao: reflexao.trim(),
+          respostaReflexao: textoFinal,
           isFallback,
         });
       } catch (err) {
@@ -134,6 +141,15 @@ export default function RevisaoDoDia() {
     setTimeout(() => {
       router.push('/');
     }, 3500);
+  };
+
+  const handleAbrirModalVozRevisao = () => {
+    triggerHaptic('medium');
+    setReflexaoAntesModal(reflexao);
+    setVoiceModalOpen(true);
+    startListening((transcript) => {
+      setReflexao(transcript);
+    }, reflexao);
   };
 
   return (
@@ -296,49 +312,39 @@ export default function RevisaoDoDia() {
             </div>
 
             {/* Input de Reflexão */}
-            <div className="bg-surface border border-gray-700/50 rounded-3xl p-5 shadow-lg">
+            <div className="bg-surface/90 backdrop-blur-xl border border-white/10 rounded-3xl p-5 shadow-lg">
               <h3 className="text-sm font-bold text-white mb-1">Suas reflexões de hoje</h3>
               <p className="text-xs text-gray-400 mb-4">
                 Responda às perguntas do Blu digitando ou usando o microfone. Suas respostas ficarão salvas em Meus Registros.
               </p>
 
-              <div
-                className={`bg-background border rounded-2xl p-2 mb-4 transition-colors shadow-inner ${
-                  isListening
-                    ? 'border-red-500/50 bg-red-500/5'
-                    : 'border-gray-600/50 focus-within:border-primary/50'
-                }`}
-              >
+              <div className="bg-[#111317] border border-white/10 focus-within:border-primary/50 rounded-2xl p-2 mb-4 transition-colors shadow-inner">
                 <textarea
                   value={reflexao}
                   onChange={(e) => setReflexao(e.target.value)}
-                  placeholder={
-                    isListening ? 'Ouvindo sua reflexão...' : 'Escreva aqui suas respostas para as perguntas do Blu...'
-                  }
-                  className="w-full bg-transparent text-sm text-white placeholder-slate-500 resize-none h-28 p-2 focus:outline-none"
+                  placeholder="Escreva aqui suas respostas ou toque no mic para desabafar..."
+                  className="w-full bg-transparent text-sm text-white placeholder-gray-500 resize-none h-28 p-2 focus:outline-none"
                 />
                 <div className="flex justify-between items-center px-2 pb-1">
                   <span className="text-xs text-gray-500">{reflexao.length} caracteres</span>
                   <button
                     type="button"
-                    onClick={() => toggleListening(reflexao, setReflexao)}
-                    title={isListening ? 'Parar ditado' : 'Ditar por voz'}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                      isListening
-                        ? 'bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse'
-                        : 'bg-surface/70 text-white hover:bg-gray-700'
-                    }`}
+                    onClick={handleAbrirModalVozRevisao}
+                    title="Responder por voz com o Blu"
+                    className="h-10 px-3.5 rounded-xl bg-primary/15 hover:bg-primary/25 border border-primary/30 text-primary flex items-center justify-center gap-1.5 transition-all active:scale-95"
                   >
-                    {isListening ? '⏹️' : '🎙️'}
+                    <span className="text-base leading-none">🎙️</span>
+                    <span className="text-xs font-bold">Falar</span>
                   </button>
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
                 <button
-                  onClick={handleEnviarReflexao}
+                  type="button"
+                  onClick={() => handleEnviarReflexao()}
                   disabled={reflexao.trim().length === 0 || isSaving}
-                  className="w-full bg-primary hover:bg-[#8ab08f] disabled:bg-surface/70 disabled:text-gray-500 text-[#1A1A1A] font-nunito font-bold py-3.5 rounded-xl text-sm transition-colors"
+                  className="w-full bg-primary hover:bg-[#8ab08f] active:scale-[0.98] disabled:bg-surface/70 disabled:text-gray-500 text-[#121418] font-nunito font-extrabold py-3.5 rounded-2xl text-sm transition-all"
                 >
                   {isSaving ? 'Salvando...' : 'Salvar e Concluir Reflexão'}
                 </button>
@@ -375,6 +381,29 @@ export default function RevisaoDoDia() {
           </div>
         )}
       </div>
+
+      {/* Modal de Voz na Revisão */}
+      <VoiceListeningModal
+        isOpen={voiceModalOpen}
+        isListening={isListening}
+        transcriptText={reflexao}
+        onChangeText={(txt) => {
+          setReflexao(txt);
+          syncManualText(txt);
+        }}
+        onCancel={() => {
+          stopListening();
+          setVoiceModalOpen(false);
+          setReflexao(reflexaoAntesModal);
+        }}
+        onKeepInField={(finalText: string) => {
+          stopListening();
+          setVoiceModalOpen(false);
+          setReflexao(finalText);
+        }}
+        onFinishAndSubmit={(finalText) => handleEnviarReflexao(finalText)}
+        submitLabel="Concluir e Salvar Reflexão"
+      />
     </main>
   );
 }

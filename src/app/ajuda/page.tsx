@@ -17,6 +17,20 @@ export default function Ajuda() {
       </header>
 
       <div className="space-y-4 animate-fade-in-up">
+        {/* Rever Tour com o Blu */}
+        <button 
+          onClick={() => router.push('/?tour=true')}
+          className="w-full bg-surface/90 border border-primary/30 hover:bg-surface hover:border-primary/50 active:scale-[0.98] rounded-3xl p-5 flex items-center gap-4 transition-all text-left group shadow-lg"
+        >
+          <div className="w-12 h-12 bg-primary/10 border border-primary/25 text-primary rounded-full flex items-center justify-center text-2xl group-hover:scale-110 transition-transform flex-shrink-0">
+            🐾
+          </div>
+          <div>
+            <h2 className="font-bold text-white text-sm">Rever Tour pelo Aplicativo</h2>
+            <p className="text-xs text-primary/80 mt-0.5 font-medium">Veja novamente a apresentação das ferramentas com o Blu</p>
+          </div>
+        </button>
+
         <button className="w-full bg-surface border border-gray-700/50 hover:bg-surface/70 hover:border-gray-600/50 rounded-3xl p-5 flex items-center gap-4 transition-all text-left group">
           <div className="w-12 h-12 bg-green-500/10 border border-green-500/20 text-green-400 rounded-full flex items-center justify-center text-2xl group-hover:scale-110 transition-transform flex-shrink-0">
             💬

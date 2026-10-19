@@ -13,7 +13,8 @@ export default function Perfil() {
   const [salvando, setSalvando] = useState(false);
 
   // Campos do formulário
-  const [nome, setNome] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [secondName, setSecondName] = useState('');
   const [email, setEmail] = useState('');
   const [medicoResponsavel, setMedicoResponsavel] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
@@ -28,7 +29,9 @@ export default function Perfil() {
     }
 
     if (user) {
-      setNome(user.displayName || '');
+      const partes = (user.displayName || '').trim().split(' ');
+      setFirstName(partes[0] || '');
+      setSecondName(partes.slice(1).join(' ') || '');
       setEmail(user.email || '');
 
       // Buscar dados extras do Firestore (médico responsável)
@@ -51,9 +54,13 @@ export default function Perfil() {
     setMensagemErro('');
     setMensagemSucesso('');
 
+    const nomeCompleto = secondName.trim()
+      ? `${firstName.trim()} ${secondName.trim()}`
+      : firstName.trim();
+
     try {
       const res = await updateUserProfile({
-        nome,
+        nome: nomeCompleto,
         email,
         senha: novaSenha ? novaSenha : undefined,
         medicoResponsavel,
@@ -165,18 +172,32 @@ export default function Perfil() {
         <form onSubmit={handleSalvar} className="animate-fade-in flex flex-col flex-1 space-y-4">
           <div className="bg-surface border border-gray-700/50 rounded-3xl p-5 space-y-4">
             
-            <div className="space-y-1.5">
-              <label className="text-xs font-nunito font-bold text-gray-400 uppercase tracking-wider ml-1">
-                Nome Completo
-              </label>
-              <input 
-                type="text"
-                required
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Seu nome"
-                className="w-full bg-background/50 border border-gray-700/50 rounded-2xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-colors text-sm"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-nunito font-bold text-gray-400 uppercase tracking-wider ml-1">
+                  Primeiro Nome
+                </label>
+                <input 
+                  type="text"
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Ex: João"
+                  className="w-full bg-background/50 border border-gray-700/50 rounded-2xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-colors text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-nunito font-bold text-gray-400 uppercase tracking-wider ml-1">
+                  Sobrenome
+                </label>
+                <input 
+                  type="text"
+                  value={secondName}
+                  onChange={(e) => setSecondName(e.target.value)}
+                  placeholder="Ex: Silva"
+                  className="w-full bg-background/50 border border-gray-700/50 rounded-2xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-colors text-sm"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">

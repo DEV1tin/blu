@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getRegistros, getRevisoes, salvarRevisao } from '../actions';
+import { getRegistros, getRevisoes, salvarRevisao, deleteRegistro } from '../actions';
 import { useAuth } from '../../context/AuthContext';
 import { getLogicalDate, getLogicalDateString } from '../../lib/dateUtils';
 import { RevisaoDiariaData } from '../../types/database';
@@ -25,6 +25,16 @@ export default function MeusRegistros() {
   const [textoRespostaTemp, setTextoRespostaTemp] = useState<string>('');
   const [salvandoRevisaoKey, setSalvandoRevisaoKey] = useState<string | null>(null);
   const [feedbackPadraoKey, setFeedbackPadraoKey] = useState<string | null>(null);
+
+  const handleExcluirRegistro = async (id: string) => {
+    if (!window.confirm('Deseja realmente apagar este registro?')) return;
+    try {
+      await deleteRegistro(id);
+      setRegistros((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.error('Erro ao excluir registro:', err);
+    }
+  };
 
   const todayKey = useMemo(() => getLogicalDateString(new Date()), []);
   const yesterdayKey = useMemo(() => {
@@ -204,7 +214,7 @@ export default function MeusRegistros() {
                 {group.sono.map((reg) => (
                   <div
                     key={reg.id}
-                    className="bg-surface border border-gray-700/50 rounded-2xl p-4 flex justify-between items-start group hover:border-gray-600/50 transition-colors"
+                    className="bg-surface border border-gray-700/50 rounded-2xl p-4 flex justify-between items-center group hover:border-gray-600/50 transition-colors"
                   >
                     <div className="flex gap-3 items-center">
                       <div className="text-2xl">{reg.emoji}</div>
@@ -218,6 +228,14 @@ export default function MeusRegistros() {
                         <p className="text-gray-400 text-sm leading-relaxed">{reg.detalhe}</p>
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => handleExcluirRegistro(reg.id)}
+                      className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-xs active:scale-95 flex-shrink-0"
+                      title="Apagar este registro"
+                    >
+                      🗑️
+                    </button>
                   </div>
                 ))}
               </div>
@@ -241,7 +259,7 @@ export default function MeusRegistros() {
                     </div>
 
                     {/* Card do Registro */}
-                    <div className="flex-1 bg-surface border border-gray-700/50 rounded-2xl p-4 flex justify-between items-start group hover:border-gray-600/50 transition-colors">
+                    <div className="flex-1 bg-surface border border-gray-700/50 rounded-2xl p-4 flex justify-between items-center group hover:border-gray-600/50 transition-colors">
                       <div className="flex gap-3">
                         <div className="text-2xl mt-0.5">{reg.emoji}</div>
                         <div>
@@ -254,6 +272,14 @@ export default function MeusRegistros() {
                           <p className="text-gray-400 text-sm mt-1 leading-relaxed">{reg.detalhe}</p>
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleExcluirRegistro(reg.id)}
+                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-xs active:scale-95 flex-shrink-0"
+                        title="Apagar este registro"
+                      >
+                        🗑️
+                      </button>
                     </div>
                   </div>
                 ))}

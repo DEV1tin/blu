@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #2B2D31;
-  --color-surface: #404249;
-  --color-foreground: #E5E7EB;
+  --color-background: #121418;
+  --color-surface: #1C1F26;
+  --color-foreground: #F3F4F6;
   
   --color-primary: #9CBDA1;
   --color-secondary: #B4A6D5;
@@ -17,14 +17,19 @@
 }
 
 :root {
-  --background: #2B2D31;
-  --surface: #404249;
-  --foreground: #E5E7EB;
+  --background: #121418;
+  --surface: #1C1F26;
+  --foreground: #F3F4F6;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
+  overscroll-behavior-y: none;
 }
 
 h1, h2, h3, h4, h5, h6, .font-nunito {
@@ -33,4 +38,28 @@ h1, h2, h3, h4, h5, h6, .font-nunito {
 
 button {
   font-family: var(--font-nunito);
+}
+
+/* Utilitário para ocultar barra de rolagem mantendo o scroll funcional (Roleta iOS) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

@@ -80,6 +80,60 @@ export async function salvarRegistro(registro: Omit<RegistroData, 'dataLogica' |
 }
 
 /**
+ * Atualiza um registro existente (Medicação, Sono, etc.) sem criar duplicidade
+ */
+export async function atualizarRegistro(
+  id: string,
+  dadosAtualizados: Partial<Omit<RegistroData, 'id' | 'pacienteId' | 'dataLogica' | 'createdAt'>>
+): Promise<boolean> {
+  // Remove chaves undefined para não quebrar o updateDoc do Firestore
+  const payloadLimpo = Object.fromEntries(
+    Object.entries(dadosAtualizados).filter(([_, v]) => v !== undefined)
+  );
+
+  if (isFirebaseConfigured && id && !id.startsWith('local_')) {
+    try {
+      const docRef = doc(db, 'registros', id);
+      await updateDoc(docRef, payloadLimpo);
+      return true;
+    } catch (err) {
+      console.warn('Falha ao atualizar registro no Firestore, tentando local:', err);
+    }
+  }
+
+  const existentes = getLocalData<RegistroData[]>(STORAGE_KEY_REGISTROS, []);
+  const idx = existentes.findIndex(r => r.id === id);
+  if (idx !== -1) {
+    existentes[idx] = {
+      ...existentes[idx],
+      ...payloadLimpo,
+    };
+    setLocalData(STORAGE_KEY_REGISTROS, existentes);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Exclui um registro existente (Medicação, Sono, Sentimento, etc.)
+ */
+export async function excluirRegistro(id: string): Promise<boolean> {
+  if (isFirebaseConfigured && id && !id.startsWith('local_')) {
+    try {
+      const docRef = doc(db, 'registros', id);
+      await deleteDoc(docRef);
+    } catch (err) {
+      console.warn('Falha ao excluir registro no Firestore, tentando local:', err);
+    }
+  }
+
+  const existentes = getLocalData<RegistroData[]>(STORAGE_KEY_REGISTROS, []);
+  const filtrados = existentes.filter(r => r.id !== id);
+  setLocalData(STORAGE_KEY_REGISTROS, filtrados);
+  return true;
+}
+
+/**
  * Busca todos os registros do paciente (para Meus Registros / Timeline)
  * Ordenação feita no cliente para evitar erros de índice composto no Firestore
  */
@@ -111,6 +165,7 @@ export async function buscarRegistros(pacienteId: string): Promise<RegistroData[
  */
 export async function buscarRegistrosDeHoje(pacienteId: string): Promise<{
   medicacao?: RegistroData;
+  medicacoes: RegistroData[];
   sono?: RegistroData;
   sentimentos: RegistroData[];
 }> {
@@ -118,11 +173,12 @@ export async function buscarRegistrosDeHoje(pacienteId: string): Promise<{
   const todos = await buscarRegistros(pacienteId);
   const registrosHoje = todos.filter(r => r.dataLogica === hoje);
 
-  const medicacao = registrosHoje.find(r => r.tipo === 'MEDICACAO');
+  const medicacoes = registrosHoje.filter(r => r.tipo === 'MEDICACAO');
+  const medicacao = medicacoes[0];
   const sono = registrosHoje.find(r => r.tipo === 'SONO');
   const sentimentos = registrosHoje.filter(r => r.tipo !== 'MEDICACAO' && r.tipo !== 'SONO');
 
-  return { medicacao, sono, sentimentos };
+  return { medicacao, medicacoes, sono, sentimentos };
 }
 
 /**
